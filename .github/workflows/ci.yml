@@ -1,0 +1,35 @@
+name: Anchor (macOS)
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  core:
+    name: AnchorCore tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:5.10
+    defaults:
+      run:
+        working-directory: AnchorCore
+    steps:
+      - uses: actions/checkout@v4
+      - run: swift test
+  app:
+    name: Build & test app (macOS)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew list xcodegen >/dev/null 2>&1 || brew install xcodegen
+      - run: xcodegen generate
+      - name: Build and test (ad-hoc signed)
+        run: |
+          xcodebuild -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+            test
