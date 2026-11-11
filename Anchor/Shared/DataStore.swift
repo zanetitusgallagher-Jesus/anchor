@@ -1,4 +1,5 @@
 import AnchorCore
+import AppKit
 import Foundation
 import SwiftData
 

@@ -50,7 +50,7 @@ targets:
         LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
         # Menu bar app: no Dock icon except while windows need one.
         LSUIElement: true
-        NSHumanReadableCopyright: Scripture text: KJV and WEB, public domain.
+        NSHumanReadableCopyright: "Scripture text: KJV and WEB, public domain."
     entitlements:
       path: Anchor/Anchor.entitlements
       properties:

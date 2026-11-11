@@ -1,5 +1,6 @@
 import AnchorCore
 import AppKit
+import Combine
 import SwiftUI
 
 /// Gate step: today's reading must stay on screen for the minimum time

@@ -8,10 +8,12 @@ import XCTest
 /// (SM-2, streaks, gate policy) is tested in AnchorCore.
 @MainActor
 final class AppIntegrationTests: XCTestCase {
+    var container: ModelContainer!
     var store: DataStore!
 
     override func setUp() async throws {
-        store = DataStore(context: AnchorSchema.makeContainer(inMemory: true).mainContext)
+        container = AnchorSchema.makeContainer(inMemory: true)
+        store = DataStore(context: container.mainContext)
     }
 
     func testCompletingTodayHidesTheGate() {
