@@ -16,9 +16,9 @@ final class AppModel {
     /// Bumped whenever data changes outside SwiftUI queries, so summary views refresh.
     var revision = 0
 
-    init(container: ModelContainer, settingsStore: SettingsStore = SettingsStore()) {
+    init(container: ModelContainer, settingsStore: SettingsStore? = nil) {
         self.container = container
-        self.settingsStore = settingsStore
+        self.settingsStore = settingsStore ?? SettingsStore()
     }
 
     var settings: AnchorSettings {
