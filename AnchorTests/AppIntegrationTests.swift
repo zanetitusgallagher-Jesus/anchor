@@ -50,6 +50,12 @@ final class AppIntegrationTests: XCTestCase {
         XCTAssertTrue(store.unlockedDays().isEmpty)
     }
 
+    func testFocusAllowanceIsLoggedButDoesNotUnlockTheGate() {
+        store.logUnlock(kind: "focusOverride", reason: "Social allowed for 5 min")
+        XCTAssertEqual(store.unlockEvents().first?.kind, "focusOverride")
+        XCTAssertTrue(store.unlockedDays().isEmpty)
+    }
+
     func testMemoryVerseScheduling() {
         let verse = Verse(ref: VerseRef(bookID: "JHN", chapter: 3, verse: 16), text: "For God so loved the world")
         store.toggleMemorize(verse, translationID: "WEB")

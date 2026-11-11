@@ -104,6 +104,8 @@ struct OverviewPanel: View {
                 }
             }
 
+            FocusStatusRow()
+
             if !done.contains(today) {
                 HStack {
                     Text(gateDescription(decision)).foregroundStyle(Theme.secondaryInk)
@@ -131,6 +133,29 @@ struct OverviewPanel: View {
         HStack(spacing: 4) {
             RoundedRectangle(cornerRadius: 2).fill(c).frame(width: 10, height: 10)
             Text(label)
+        }
+    }
+}
+
+struct FocusStatusRow: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let focus = model.settings.focus
+        HStack(spacing: 10) {
+            Image(systemName: "hourglass").foregroundStyle(Theme.accent)
+            if !focus.enabled || focus.blockedApps.isEmpty {
+                Text("Focus hours are off.").foregroundStyle(Theme.secondaryInk)
+            } else {
+                Text("Focus hours \(FocusPolicy.describe(focus)) · \(focus.blockedApps.count) app\(focus.blockedApps.count == 1 ? "" : "s") paused")
+                if model.focus.isActiveNow {
+                    Text("Now").font(.caption.weight(.semibold)).foregroundStyle(Theme.background)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Theme.accent, in: Capsule())
+                }
+            }
+            Spacer()
+            SettingsLink { Text("Change…") }.buttonStyle(.borderless)
         }
     }
 }
@@ -396,11 +421,11 @@ struct UnlockLogPanel: View {
         let _ = model.revision
         let events = model.store.unlockEvents()
         VStack(alignment: .leading, spacing: 14) {
-            PanelTitle(title: "Unlock log", subtitle: "Every emergency unlock, failsafe release and Shift safe-launch.")
+            PanelTitle(title: "Unlock log", subtitle: "Every emergency unlock, failsafe release, Shift safe-launch and focus-hours allowance.")
             if events.isEmpty { Text("No unlocks. 🙏").foregroundStyle(Theme.secondaryInk) }
             ForEach(events) { e in
                 HStack {
-                    Image(systemName: e.kind == "emergency" ? "lock.open" : e.kind == "failsafe" ? "timer" : "shift")
+                    Image(systemName: icon(e.kind))
                         .foregroundStyle(Theme.accent).frame(width: 20)
                     VStack(alignment: .leading) {
                         Text(label(e.kind)).font(.system(size: 14, weight: .medium))
@@ -414,11 +439,21 @@ struct UnlockLogPanel: View {
         }
     }
 
+    private func icon(_ kind: String) -> String {
+        switch kind {
+        case "emergency": "lock.open"
+        case "failsafe": "timer"
+        case "focusOverride": "hourglass"
+        default: "shift"
+        }
+    }
+
     private func label(_ kind: String) -> String {
         switch kind {
         case "emergency": "Emergency unlock"
         case "failsafe": "Failsafe released the gate"
         case "safeLaunch": "Safe launch (Shift held)"
+        case "focusOverride": "Focus hours: app allowed briefly"
         default: kind
         }
     }

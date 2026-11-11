@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         model.gate.start()
+        model.focus.start()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

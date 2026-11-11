@@ -35,7 +35,9 @@ struct AnchorStore {
 
     func unlockedDays() -> Set<DayKey> {
         let all = (try? context.fetch(FetchDescriptor<UnlockEvent>())) ?? []
-        return Set(all.filter { $0.kind != "safeLaunch" }.compactMap { DayKey(string: $0.dayKey) })
+        // Only emergency unlocks and failsafe releases open the gate for the day;
+        // safe launches and focus-hour allowances are logged but are not gate unlocks.
+        return Set(all.filter { $0.kind == "emergency" || $0.kind == "failsafe" }.compactMap { DayKey(string: $0.dayKey) })
     }
 
     func logUnlock(kind: String, reason: String? = nil, now: Date = .now) {

@@ -12,6 +12,7 @@ final class AppModel {
     let bibles = BibleStore()
     let plans = PlanStore()
     @ObservationIgnored private(set) lazy var gate = GateController(model: self)
+    @ObservationIgnored private(set) lazy var focus = FocusController(model: self)
 
     /// Bumped whenever data changes outside SwiftUI queries, so summary views refresh.
     var revision = 0

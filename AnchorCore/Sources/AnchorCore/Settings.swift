@@ -82,6 +82,9 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
     // Appearance
     public var appearance: AppearancePreference = .system
 
+    // Focus hours (app pausing after the gate is cleared)
+    public var focus = FocusSchedule()
+
     // AI (off by default)
     public var aiReflectionEnabled = false
     public var aiModel = "claude-opus-5-5"
@@ -120,6 +123,7 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
         enabledRewire = v(.enabledRewire, d.enabledRewire)
         rewirePerDay = v(.rewirePerDay, d.rewirePerDay)
         appearance = v(.appearance, d.appearance)
+        focus = v(.focus, d.focus)
         aiReflectionEnabled = v(.aiReflectionEnabled, d.aiReflectionEnabled)
         aiModel = v(.aiModel, d.aiModel)
     }

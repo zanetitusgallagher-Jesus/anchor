@@ -10,6 +10,7 @@ struct SettingsView: View {
             GateSettings().tabItem { Label("Gate", systemImage: "lock") }
             FlowSettings().tabItem { Label("Daily flow", systemImage: "list.number") }
             ScriptureSettings().tabItem { Label("Scripture", systemImage: "book") }
+            FocusSettings().tabItem { Label("Focus", systemImage: "hourglass") }
             AISettings().tabItem { Label("AI", systemImage: "sparkles") }
             PrivacySettings().tabItem { Label("Privacy", systemImage: "hand.raised") }
         }

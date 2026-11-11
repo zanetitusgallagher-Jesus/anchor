@@ -7,6 +7,7 @@ It never locks you out of your own Mac. An emergency unlock, a Shift-key safe la
 - macOS 14 Sonoma or later · Swift 5.9+ · SwiftUI · SwiftData
 - Everything stays local. Personal writing is encrypted at rest. No analytics.
 - Bundled public-domain translations: **KJV** (1769) and **World English Bible**. Optional **API.Bible** support for licensed translations, using your own key.
+- **Focus hours:** after the gate is cleared, pause chosen apps (for example social or news apps) during the hours you set.
 
 ---
 
@@ -75,9 +76,36 @@ The decision logic is pure Swift (`AnchorCore/GatePolicy.swift`) and unit-tested
 3. **Failsafe.** If the gate has been up for 90 minutes (configurable, 30–240), it releases itself. This protects against a bug or a stuck step.
 4. **Log out / restart / shut down** always work. Anchor never blocks session termination.
 
-Uses 1–3 are recorded in the **Unlock log** on the dashboard, and emergency-unlock days appear as outlined squares on the streak heatmap. An unlocked day doesn't count toward your streak, but you can still finish the session later from the menu bar, and then it does.
+Uses 1–3 are recorded in the **Unlock log** (focus-hours allowances are logged there too, but they don't affect the gate) on the dashboard, and emergency-unlock days appear as outlined squares on the streak heatmap. An unlocked day doesn't count toward your streak, but you can still finish the session later from the menu bar, and then it does.
 
 > If something goes badly wrong, you can also remove Anchor from **System Settings → General → Login Items** in a safe-launch session, or from another account. You can also delete `~/Library/Containers/app.anchor.Anchor`.
+
+---
+
+## Focus hours (app pausing)
+
+Settings → **Focus** lets you choose apps to pause, the hours (for example 9:00–17:00, or overnight such as 22:00–02:00), and the days.
+
+When you open a paused app during focus hours, Anchor:
+1. hides the app, and
+2. shows a calm full-screen "*App* is paused · Focus hours until 5:00 PM" screen with Colossians 3:23.
+
+From there you can:
+- choose **Back to what matters**, which keeps the app hidden and returns you to Finder, or
+- **hold for 5 seconds** to allow the app for a few minutes (configurable, 1–30). Each allowance is recorded in the Unlock log.
+
+Anchor checks when any app becomes active, plus every 2 seconds as a backstop, so an app that is already open when focus hours begin is paused too. Focus hours never apply while the morning gate is up.
+
+**Never paused:** Finder, System Settings, Terminal, Activity Monitor and Anchor itself, even if you add them to the list. This keeps your Mac usable.
+
+**Why not Apple's Screen Time API?** `FamilyControls`, `ManagedSettings` and `DeviceActivity` are available only on iOS, iPadOS and Mac Catalyst. They aren't available to native macOS apps, and Anchor's gate needs AppKit windows that a Catalyst app can't create. So Anchor pauses apps itself, using only public AppKit APIs (`NSWorkspace` activation notifications and `NSRunningApplication.hide()`). This needs no special entitlement or Apple approval, and the app stays sandboxed.
+
+The trade-offs:
+- It can't block websites.
+- It can't stop an app's background work; it keeps the app out of sight.
+- It's a commitment device, not a parental control that can't be bypassed.
+
+The schedule logic is in `AnchorCore/Focus.swift`, with unit tests.
 
 ---
 
@@ -183,6 +211,7 @@ anchor/
 │   │   ├── Recall.swift        first-letter, cloze, recall grading → SM-2 quality
 │   │   ├── DailyContent.swift  reflection rotation, Rewire scheduler, box breathing
 │   │   ├── Journal.swift       templates, tags, search, Markdown export
+│   │   ├── Focus.swift         focus-hours schedule, overnight windows, pause rules
 │   │   └── Summary.swift       flow steps, summary numbers
 │   └── Tests/AnchorCoreTests/  SM-2, streak, gate-state, plan, recall, content tests
 ├── Anchor/                     the macOS app
@@ -192,6 +221,7 @@ anchor/
 │   ├── Memory/                 review session (first-letter / cloze / recitation)
 │   ├── Journal/                editor, NSTextView rich text, prayer list
 │   ├── Rewire/                 the four exercises
+│   ├── Focus/                  focus hours: app pausing controller, shield screen, settings
 │   ├── Dashboard/              overview + heatmap, plan, memory, journal search/export, prayers, log
 │   ├── Settings/               Settings window
 │   ├── Shared/                 SwiftData models, AnchorStore, encryption, Keychain, theme
@@ -229,6 +259,5 @@ The Rewire exercises describe only what the evidence supports, and they cite the
 ## Roadmap
 
 These phases are not built yet:
-- **Screen Time integration** (`FamilyControls` / `ManagedSettings`): block chosen apps during focus hours after the gate is cleared. This needs Apple's Family Controls entitlement.
 - **iCloud sync** through CloudKit. The models would need their `@Attribute(.unique)` constraints replaced, since CloudKit does not support them.
 - **Family mode:** multiple profiles, each with its own plan and journal.
