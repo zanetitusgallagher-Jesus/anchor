@@ -15,13 +15,23 @@ It never locks you out of your own Mac. An emergency unlock, a Shift-key safe la
 
 | # | Step | What happens |
 |---|------|--------------|
-| 1 | **Welcome** | The date, your streak and a short centering verse, then **Begin**. Optional: 60 seconds of box breathing (4-4-4-4), off by default; turn it on in Settings → Daily flow. |
-| 2 | **Scripture** | The next day of your reading plan. **Continue** unlocks after the minimum reading time (default 5 min), which only counts while Anchor is frontmost. You can change the translation and text size, and star verses to memorize. |
+| 1 | **Welcome** | The date, your streak and a short centering verse. A **"How much time do you have today?"** slider (2–15 minutes) shapes the session (see below). Optional box breathing (4-4-4-4) is off by default; turn it on in Settings → Daily flow. |
+| 2 | **Scripture** | The next day of your reading plan. **Continue** unlocks after the reading time set by the slider, which only counts while Anchor is frontmost. You can change the translation and text size, and star verses to memorize. |
 | 3 | **Reflection** | One prompt each day, rotating: *Summarize the passage in one sentence* / *What does this reveal about God?* / *What is one thing to obey or apply today?* AI questions are optional (see below). |
 | 4 | **Memory verse** | Shown only on days when SM-2 says a starred verse is due. Three modes: first-letter recall, cloze (fill the gaps), and full recitation. Anchor grades what you typed and suggests a score, and you choose the final grade. |
 | 5 | **Journal** | SOAP, Gratitude (3 specific things), Prayer list (requests, then answers), or Free write (rich text). Each entry takes tags and a mood (1–5) and links to the day's passage. |
 | 6 | **Rewire** | 1–2 short exercises a day, rotating through the ones you've enabled: *Gratitude, specifically*, a *When–then plan* (implementation intention), a CBT-style *Thought reframe*, and *Walk through the day* (process visualization). |
 | 7 | **Unlock** | A summary card (streak, minutes in the Word, verses memorized). Then the gate goes away for the rest of the day. |
+
+**Session length.** The slider remembers your last choice. Reading gets about 40% of the time (1–6 minutes), and longer sessions add steps:
+
+| Minutes | Session |
+|---|---|
+| 2–3 | Scripture, Reflection |
+| 4–7 | + Memory verse (if one is due, up to 2) |
+| 8–11 | + Journal |
+| 12–14 | + one Rewire exercise |
+| 15 | + a second Rewire exercise (if Settings allows two a day) |
 
 In Settings you can mark each of steps 2–6 *Required*, *Optional* (shows **Skip for today**) or *Off*. With the defaults, the whole session takes about 10–15 minutes.
 

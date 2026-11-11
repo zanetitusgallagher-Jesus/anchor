@@ -113,7 +113,8 @@ struct FlowSettings: View {
                 Text("Memory review only appears on days a verse is due.").font(.caption).foregroundStyle(.secondary)
             }
             Section("Timing") {
-                Stepper("Minimum reading time: \(model.settings.minimumReadingMinutes) min", value: bind(model, \.minimumReadingMinutes), in: 1...30)
+                Text("You choose how long each session is (2–15 minutes) with the slider on the Welcome screen. Reading gets about 40% of that time; longer sessions add a memory verse, journaling and Rewire.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Toggle("Box breathing on the Welcome screen", isOn: bind(model, \.breathingEnabled))
                 if model.settings.breathingEnabled {
                     Stepper("Breathing: \(model.settings.breathingSeconds) s", value: bind(model, \.breathingSeconds), in: 15...180, step: 15)

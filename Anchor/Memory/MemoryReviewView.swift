@@ -20,7 +20,7 @@ struct MemoryStep: View {
                 }
                 StepFooter(flow: flow)
             } else {
-                MemoryReviewView(verses: model.store.dueVerses(on: flow.today)) { finished = true }
+                MemoryReviewView(verses: model.store.dueVerses(on: flow.today, limit: flow.plan.memoryLimit)) { finished = true }
                 StepFooter(flow: flow, canContinue: !flow.isRequired(.memory))
             }
         }

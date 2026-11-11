@@ -11,7 +11,7 @@ struct ScriptureStep: View {
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        let remaining = Int(GateFlow.readingSecondsRemaining(elapsed: flow.readingSeconds, settings: model.settings).rounded(.up))
+        let remaining = Int(SessionPlanner.readingSecondsRemaining(elapsed: flow.readingSeconds, readingMinutes: flow.plan.readingMinutes).rounded(.up))
         let required = flow.isRequired(.scripture)
 
         VStack(alignment: .leading, spacing: 20) {

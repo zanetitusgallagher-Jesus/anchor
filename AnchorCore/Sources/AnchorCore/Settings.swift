@@ -63,6 +63,8 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
     public var optionalSteps: Set<GateStep> = []
     public var disabledSteps: Set<GateStep> = []
     public var minimumReadingMinutes = 5
+    /// Last value of the Welcome screen's "How much time today?" slider (2–15).
+    public var sessionMinutes = 10
     /// Box breathing on the Welcome step. Off by default; turn on in Settings → Daily flow.
     public var breathingEnabled = false
     public var breathingSeconds = 60
@@ -114,6 +116,7 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
         optionalSteps = v(.optionalSteps, d.optionalSteps)
         disabledSteps = v(.disabledSteps, d.disabledSteps)
         minimumReadingMinutes = v(.minimumReadingMinutes, d.minimumReadingMinutes)
+        sessionMinutes = v(.sessionMinutes, d.sessionMinutes)
         breathingEnabled = v(.breathingEnabled, d.breathingEnabled)
         breathingSeconds = v(.breathingSeconds, d.breathingSeconds)
         breathingSkippableAfterSeconds = v(.breathingSkippableAfterSeconds, d.breathingSkippableAfterSeconds)

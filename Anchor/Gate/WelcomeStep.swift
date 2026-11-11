@@ -5,6 +5,7 @@ struct WelcomeStep: View {
     let flow: DailyFlow
     @Environment(AppModel.self) private var model
     @State private var started = Date()
+    @State private var minutes: Double = -1
 
     var body: some View {
         let settings = model.settings
@@ -36,17 +37,83 @@ struct WelcomeStep: View {
             }
             .padding(.top, 20)
 
+            timePicker
+                .padding(.top, 8)
+
             if settings.breathingEnabled {
                 BreathingView(totalSeconds: Double(settings.breathingSeconds))
                     .frame(height: 300)
                 breathingButtons(settings)
             } else {
-                Button("Begin") { flow.advance() }
+                Button("Begin") { begin() }
                     .buttonStyle(PrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
-                    .padding(.top, 24)
             }
         }
+        .onAppear {
+            if minutes < 0 {
+                let r = SessionPlanner.range
+                minutes = Double(min(r.upperBound, max(r.lowerBound, settings.sessionMinutes)))
+            }
+        }
+    }
+
+    private var chosenMinutes: Int {
+        let r = SessionPlanner.range
+        return minutes < 0 ? SessionPlanner.defaultMinutes : min(r.upperBound, max(r.lowerBound, Int(minutes.rounded())))
+    }
+
+    private func begin() { flow.begin(minutes: chosenMinutes) }
+
+    /// "How much time do you have today?" — 2 to 15 minutes.
+    private var timePicker: some View {
+        let range = SessionPlanner.range
+        let preview = flow.preview(minutes: chosenMinutes)
+        return Card {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("How much time do you have today?")
+                        .font(.system(size: 15, weight: .medium))
+                    Spacer()
+                    Text("\(chosenMinutes) min")
+                        .font(Theme.display(28))
+                        .monospacedDigit()
+                        .foregroundStyle(Theme.accent)
+                        .contentTransition(.numericText())
+                        .animation(.snappy, value: chosenMinutes)
+                }
+                Slider(value: $minutes, in: Double(range.lowerBound)...Double(range.upperBound), step: 1) {
+                    Text("Session length")
+                } minimumValueLabel: {
+                    Text("\(range.lowerBound) min").font(.caption).foregroundStyle(Theme.secondaryInk)
+                } maximumValueLabel: {
+                    Text("\(range.upperBound) min").font(.caption).foregroundStyle(Theme.secondaryInk)
+                }
+                .tint(Theme.accent)
+                .accessibilityValue("\(chosenMinutes) minutes")
+
+                Text(describe(preview))
+                    .font(.callout)
+                    .foregroundStyle(Theme.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: 560)
+    }
+
+    private func describe(_ p: SessionPlan) -> String {
+        var parts: [String] = []
+        for step in p.steps {
+            switch step {
+            case .scripture: parts.append("Read \(p.readingMinutes) min")
+            case .reflection: parts.append("Reflect")
+            case .memory: parts.append("Memory verse")
+            case .journal: parts.append("Journal")
+            case .rewire: parts.append(p.rewireCount > 1 ? "\(p.rewireCount) Rewire exercises" : "Rewire")
+            case .welcome, .unlock: break
+            }
+        }
+        return parts.joined(separator: "  ·  ")
     }
 
     private func breathingButtons(_ settings: AnchorSettings) -> some View {
@@ -57,11 +124,11 @@ struct WelcomeStep: View {
                 HStack {
                     Spacer()
                     if finished {
-                        Button("Begin") { flow.advance() }
+                        Button("Begin") { begin() }
                             .buttonStyle(PrimaryButtonStyle())
                             .keyboardShortcut(.defaultAction)
                     } else if canSkip {
-                        Button("Continue") { flow.advance() }.buttonStyle(QuietButtonStyle())
+                        Button("Continue") { begin() }.buttonStyle(QuietButtonStyle())
                     } else {
                         Text(" ").font(.callout)
                     }
