@@ -26,7 +26,7 @@ final class AppModel {
         set { settingsStore.settings = newValue }
     }
 
-    var store: DataStore { DataStore(context: container.mainContext) }
+    var store: AnchorStore { AnchorStore(context: container.mainContext) }
 
     /// The bundled translation used for reading, memorizing and AI prompts.
     /// When an API.Bible translation is selected, WEB is the local fallback.

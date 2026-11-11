@@ -5,7 +5,7 @@ import SwiftData
 
 /// Queries and writes over the SwiftData store, used by every module.
 @MainActor
-struct DataStore {
+struct AnchorStore {
     let context: ModelContext
 
     // MARK: Sessions & streaks

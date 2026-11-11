@@ -30,6 +30,8 @@ jobs:
       - run: xcodegen generate
       - name: Build and test (ad-hoc signed)
         run: |
+          set -o pipefail
           xcodebuild -project Anchor.xcodeproj -scheme Anchor -destination 'platform=macOS' \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
-            test
+            test 2>&1 | tee xcodebuild.log | grep -E "error:|Test Case .*(passed|failed)|\*\* .* \*\*|Executed [0-9]+ test" || true
+          grep -q "\*\* TEST SUCCEEDED \*\*" xcodebuild.log

@@ -9,11 +9,11 @@ import XCTest
 @MainActor
 final class AppIntegrationTests: XCTestCase {
     var container: ModelContainer!
-    var store: DataStore!
+    var store: AnchorStore!
 
     override func setUp() async throws {
         container = AnchorSchema.makeContainer(inMemory: true)
-        store = DataStore(context: container.mainContext)
+        store = AnchorStore(context: container.mainContext)
     }
 
     func testCompletingTodayHidesTheGate() {

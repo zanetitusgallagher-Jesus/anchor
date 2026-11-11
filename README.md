@@ -194,7 +194,7 @@ anchor/
 │   ├── Rewire/                 the four exercises
 │   ├── Dashboard/              overview + heatmap, plan, memory, journal search/export, prayers, log
 │   ├── Settings/               Settings window
-│   ├── Shared/                 SwiftData models, DataStore, encryption, Keychain, theme
+│   ├── Shared/                 SwiftData models, AnchorStore, encryption, Keychain, theme
 │   └── Resources/
 │       ├── Bibles/KJV.json, WEB.json   (31,102 verses each, compact JSON)
 │       └── Plans/*.json                (4 seed plans)
