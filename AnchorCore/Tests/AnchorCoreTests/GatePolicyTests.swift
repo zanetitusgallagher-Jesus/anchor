@@ -103,6 +103,7 @@ final class GatePolicyTests: XCTestCase {
         XCTAssertEqual(s.minimumReadingMinutes, 8)
         XCTAssertEqual(s.graceCutoffHour, AnchorSettings().graceCutoffHour)
         XCTAssertTrue(s.gateEnabled)
+        XCTAssertFalse(s.breathingEnabled, "Breathing is off unless turned on")
     }
 
     func testFlowSkipsMemoryWithoutDueCards() {

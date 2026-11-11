@@ -36,9 +36,20 @@ struct WelcomeStep: View {
             }
             .padding(.top, 20)
 
-            BreathingView(totalSeconds: Double(settings.breathingSeconds))
-                .frame(height: 300)
+            if settings.breathingEnabled {
+                BreathingView(totalSeconds: Double(settings.breathingSeconds))
+                    .frame(height: 300)
+                breathingButtons(settings)
+            } else {
+                Button("Begin") { flow.advance() }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
+                    .padding(.top, 24)
+            }
+        }
+    }
 
+    private func breathingButtons(_ settings: AnchorSettings) -> some View {
             TimelineView(.periodic(from: started, by: 1)) { ctx in
                 let elapsed = ctx.date.timeIntervalSince(started)
                 let canSkip = elapsed >= Double(settings.breathingSkippableAfterSeconds)
@@ -57,7 +68,6 @@ struct WelcomeStep: View {
                     Spacer()
                 }
             }
-        }
     }
 }
 

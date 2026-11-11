@@ -1,6 +1,6 @@
 # Anchor
 
-**A Scripture-first daily gate for macOS.** Anchor starts at login and covers every display with a calm, full-screen gate. You get to your other apps after a short morning routine: breathing, Bible reading, reflection, memory-verse review, journaling and one or two habit exercises. Then the gate steps aside for the rest of the day.
+**A Scripture-first daily gate for macOS.** Anchor starts at login and covers every display with a calm, full-screen gate. You get to your other apps after a short morning routine: Bible reading, reflection, memory-verse review, journaling and one or two habit exercises. Then the gate steps aside for the rest of the day.
 
 It never locks you out of your own Mac. An emergency unlock, a Shift-key safe launch and a failsafe timer are always available, and every use is logged.
 
@@ -15,7 +15,7 @@ It never locks you out of your own Mac. An emergency unlock, a Shift-key safe la
 
 | # | Step | What happens |
 |---|------|--------------|
-| 1 | **Welcome** | The date, your streak, a short centering verse, and 60 seconds of box breathing (4-4-4-4). You can skip after 15 seconds. |
+| 1 | **Welcome** | The date, your streak and a short centering verse, then **Begin**. Optional: 60 seconds of box breathing (4-4-4-4), off by default; turn it on in Settings → Daily flow. |
 | 2 | **Scripture** | The next day of your reading plan. **Continue** unlocks after the minimum reading time (default 5 min), which only counts while Anchor is frontmost. You can change the translation and text size, and star verses to memorize. |
 | 3 | **Reflection** | One prompt each day, rotating: *Summarize the passage in one sentence* / *What does this reveal about God?* / *What is one thing to obey or apply today?* AI questions are optional (see below). |
 | 4 | **Memory verse** | Shown only on days when SM-2 says a starred verse is due. Three modes: first-letter recall, cloze (fill the gaps), and full recitation. Anchor grades what you typed and suggests a score, and you choose the final grade. |

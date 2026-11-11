@@ -114,7 +114,10 @@ struct FlowSettings: View {
             }
             Section("Timing") {
                 Stepper("Minimum reading time: \(model.settings.minimumReadingMinutes) min", value: bind(model, \.minimumReadingMinutes), in: 1...30)
-                Stepper("Breathing: \(model.settings.breathingSeconds) s", value: bind(model, \.breathingSeconds), in: 15...180, step: 15)
+                Toggle("Box breathing on the Welcome screen", isOn: bind(model, \.breathingEnabled))
+                if model.settings.breathingEnabled {
+                    Stepper("Breathing: \(model.settings.breathingSeconds) s", value: bind(model, \.breathingSeconds), in: 15...180, step: 15)
+                }
             }
             Section("Rewire") {
                 ForEach(RewireExercise.allCases) { ex in

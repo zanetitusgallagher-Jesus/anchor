@@ -63,6 +63,8 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
     public var optionalSteps: Set<GateStep> = []
     public var disabledSteps: Set<GateStep> = []
     public var minimumReadingMinutes = 5
+    /// Box breathing on the Welcome step. Off by default; turn on in Settings → Daily flow.
+    public var breathingEnabled = false
     public var breathingSeconds = 60
     public var breathingSkippableAfterSeconds = 15
 
@@ -112,6 +114,7 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
         optionalSteps = v(.optionalSteps, d.optionalSteps)
         disabledSteps = v(.disabledSteps, d.disabledSteps)
         minimumReadingMinutes = v(.minimumReadingMinutes, d.minimumReadingMinutes)
+        breathingEnabled = v(.breathingEnabled, d.breathingEnabled)
         breathingSeconds = v(.breathingSeconds, d.breathingSeconds)
         breathingSkippableAfterSeconds = v(.breathingSkippableAfterSeconds, d.breathingSkippableAfterSeconds)
         planID = v(.planID, d.planID)
