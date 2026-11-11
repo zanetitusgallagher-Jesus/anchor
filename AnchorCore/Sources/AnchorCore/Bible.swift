@@ -39,6 +39,10 @@ public struct Verse: Hashable, Sendable, Identifiable {
     public let ref: VerseRef
     public let text: String
     public var id: VerseRef { ref }
+    public init(ref: VerseRef, text: String) {
+        self.ref = ref
+        self.text = text
+    }
 }
 
 public struct ChapterRef: Hashable, Codable, Sendable, CustomStringConvertible {
