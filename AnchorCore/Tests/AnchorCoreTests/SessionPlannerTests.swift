@@ -53,6 +53,33 @@ final class SessionPlannerTests: XCTestCase {
         XCTAssertFalse(plan(15, rewire: 0).steps.contains(.rewire))
     }
 
+    func testLongReadingRaisesTheMinimum() {
+        // A Bible-in-a-year day: ~2,100 words -> 9 minutes of reading.
+        let words = 2100
+        let need = ReadingEstimate.minutes(words: words)
+        XCTAssertEqual(need, 9)
+        XCTAssertEqual(SessionPlanner.range(requiredReadingMinutes: need), 10...20)
+
+        let shortest = SessionPlanner.plan(minutes: 2, settings: AnchorSettings(), hasDueMemoryVerses: true,
+                                           rewireAvailable: 2, requiredReadingMinutes: need)
+        XCTAssertEqual(shortest.minutes, 10, "Can't pick less time than the reading needs")
+        XCTAssertEqual(shortest.readingMinutes, 9)
+        XCTAssertEqual(shortest.steps, [.welcome, .scripture, .reflection, .unlock])
+
+        let full = SessionPlanner.plan(minutes: 20, settings: AnchorSettings(), hasDueMemoryVerses: true,
+                                       rewireAvailable: 2, requiredReadingMinutes: need)
+        XCTAssertEqual(full.readingMinutes, 9)
+        XCTAssertTrue(full.steps.contains(.journal))
+        XCTAssertTrue(full.steps.contains(.rewire))
+    }
+
+    func testShortReadingKeepsTheTwoMinuteFloor() {
+        XCTAssertEqual(ReadingEstimate.minutes(words: 25), 1)
+        XCTAssertEqual(ReadingEstimate.minutes(words: 0), 1)
+        XCTAssertEqual(SessionPlanner.range(requiredReadingMinutes: 1), 2...15)
+        XCTAssertEqual(ReadingEstimate.words(in: ["For God so loved", "the world."]), 6)
+    }
+
     func testReadingTimer() {
         XCTAssertEqual(SessionPlanner.readingSecondsRemaining(elapsed: 30, readingMinutes: 1), 30)
         XCTAssertEqual(SessionPlanner.readingSecondsRemaining(elapsed: 90, readingMinutes: 1), 0)

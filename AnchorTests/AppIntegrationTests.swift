@@ -98,6 +98,10 @@ final class AppIntegrationTests: XCTestCase {
         let plans = PlanStore()
         XCTAssertEqual(plans.seedPlans.map(\.id), PlanStore.seedIDs)
         XCTAssertEqual(plans.seedPlans.first?.days.count, 365)
+        let verseADay = plans.seedPlans.first { $0.id == "verse-a-day" }
+        XCTAssertEqual(verseADay?.days.first?.first?.description, "Genesis 1:1")
+        let words = ReadingEstimate.words(in: verseADay!.days[0].flatMap { web!.verses($0).map(\.text) })
+        XCTAssertEqual(ReadingEstimate.minutes(words: words), 1)
     }
 
     func testReadingTitle() {

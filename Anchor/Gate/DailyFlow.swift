@@ -45,6 +45,10 @@ final class DailyFlow {
     private(set) var rewireToday: [RewireExercise]
     /// Today's shape, chosen with the Welcome screen's time slider.
     private(set) var plan: SessionPlan
+    /// Words in today's reading, and the minutes they take (sets the slider's minimum).
+    let readingWords: Int
+    let requiredReadingMinutes: Int
+    var minutesRange: ClosedRange<Int> { SessionPlanner.range(requiredReadingMinutes: requiredReadingMinutes) }
     var readingSeconds: Double = 0
     var reflectionAnswer = ""
 
@@ -59,21 +63,28 @@ final class DailyFlow {
         } else {
             reading = nil
         }
-        let built = Self.build(minutes: settings.sessionMinutes, model: model, today: today)
+        let words = reading.map { r in
+            ReadingEstimate.words(in: r.chapters.flatMap { model.localBible?.verses($0).map(\.text) ?? [] })
+        } ?? 0
+        readingWords = words
+        requiredReadingMinutes = ReadingEstimate.minutes(words: words)
+        let built = Self.build(minutes: settings.sessionMinutes, model: model, today: today,
+                               requiredReading: requiredReadingMinutes)
         plan = built.plan
         rewireToday = built.rewire
         steps = built.steps
         readingSeconds = store.session(for: today, create: false)?.readingSeconds ?? 0
     }
 
-    private static func build(minutes: Int, model: AppModel, today: DayKey)
+    private static func build(minutes: Int, model: AppModel, today: DayKey, requiredReading: Int)
         -> (plan: SessionPlan, rewire: [RewireExercise], steps: [GateStep]) {
         let settings = model.settings
         let store = model.store
         let available = RewireScheduler.exercises(for: today, enabled: settings.enabledRewire, perDay: 2)
         let plan = SessionPlanner.plan(minutes: minutes, settings: settings,
                                        hasDueMemoryVerses: !store.dueVerses(on: today).isEmpty,
-                                       rewireAvailable: available.count)
+                                       rewireAvailable: available.count,
+                                       requiredReadingMinutes: requiredReading)
         // Steps already finished earlier today (e.g. before a restart) are skipped.
         let done = Set(store.session(for: today, create: false)?.stepsCompleted ?? [])
         let steps = plan.steps.filter { $0 == .welcome || $0 == .unlock || !done.contains($0.rawValue) }
@@ -83,7 +94,7 @@ final class DailyFlow {
     /// Called from the Welcome screen's Begin button with the slider's value.
     func begin(minutes: Int) {
         model.settings.sessionMinutes = minutes
-        let built = Self.build(minutes: minutes, model: model, today: today)
+        let built = Self.build(minutes: minutes, model: model, today: today, requiredReading: requiredReadingMinutes)
         plan = built.plan
         rewireToday = built.rewire
         steps = built.steps
@@ -93,7 +104,7 @@ final class DailyFlow {
 
     /// Preview for the slider: what a session of `minutes` would include.
     func preview(minutes: Int) -> SessionPlan {
-        Self.build(minutes: minutes, model: model, today: today).plan
+        Self.build(minutes: minutes, model: model, today: today, requiredReading: requiredReadingMinutes).plan
     }
 
     var current: GateStep { steps[min(index, steps.count - 1)] }

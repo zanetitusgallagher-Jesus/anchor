@@ -37,7 +37,7 @@ public enum GateFlow {
 }
 
 /// What today's session contains, given how many minutes the user chose on
-/// the Welcome screen (2–15). Steps turned Off in Settings stay off.
+/// the Welcome screen. Steps turned Off in Settings stay off.
 public struct SessionPlan: Equatable, Sendable {
     public var minutes: Int
     /// Minimum time the Scripture reading stays on screen.
@@ -49,34 +49,55 @@ public struct SessionPlan: Equatable, Sendable {
     public var rewireCount: Int
 }
 
+/// How long a passage takes to read.
+public enum ReadingEstimate {
+    /// A little above average adult silent reading (~238 wpm, Brysbaert 2019),
+    /// so the reading timer is a floor a normal reader reaches naturally.
+    public static let wordsPerMinute = 250.0
+
+    public static func words(in texts: [String]) -> Int {
+        texts.reduce(0) { $0 + $1.split(whereSeparator: { $0.isWhitespace }).count }
+    }
+
+    /// Whole minutes needed to read `words`, at least 1.
+    public static func minutes(words: Int) -> Int {
+        max(1, Int((Double(words) / wordsPerMinute).rounded(.up)))
+    }
+}
+
 public enum SessionPlanner {
+    /// The usual slider range when today's reading is short (e.g. a verse a day).
     public static let range = 2...15
     public static let defaultMinutes = 10
 
-    /// Rough budget: reading ≈ 40% of the time, reflection ≈ 1 min,
-    /// memory ≈ 2 min, journal ≈ 3 min, each Rewire exercise ≈ 2–3 min.
-    ///
-    /// | minutes | adds |
-    /// |---|---|
-    /// | 2+ | Scripture, Reflection |
-    /// | 4+ | Memory verse (if one is due) |
-    /// | 8+ | Journal |
-    /// | 12+ | one Rewire exercise |
-    /// | 15 | a second Rewire exercise (if enabled in Settings) |
+    /// The slider's range for a day whose reading needs `requiredReadingMinutes`.
+    /// The minimum leaves time to read today's passage plus a minute to reflect,
+    /// so a Bible-in-a-year day starts around 10 minutes, a single verse at 2.
+    public static func range(requiredReadingMinutes: Int) -> ClosedRange<Int> {
+        let lower = max(range.lowerBound, requiredReadingMinutes + 1)
+        return lower...max(range.upperBound, lower + 10)
+    }
+
+    /// Reading gets the time today's passage needs, or about 40% of the
+    /// session if that's more. Whatever is left adds steps: reflection (always),
+    /// memory verse (3+ spare minutes), journal (5+), one Rewire (7+), two (9+).
     public static func plan(minutes requested: Int, settings: AnchorSettings,
-                            hasDueMemoryVerses: Bool, rewireAvailable: Int) -> SessionPlan {
-        let m = min(range.upperBound, max(range.lowerBound, requested))
-        let reading = max(1, Int((Double(m) * 0.4).rounded()))
-        let memoryLimit = m < 8 ? 2 : 5
-        let rewire = m >= 15 ? min(2, settings.rewirePerDay) : (m >= 12 ? 1 : 0)
+                            hasDueMemoryVerses: Bool, rewireAvailable: Int,
+                            requiredReadingMinutes: Int = 1) -> SessionPlan {
+        let r = range(requiredReadingMinutes: requiredReadingMinutes)
+        let m = min(r.upperBound, max(r.lowerBound, requested))
+        let reading = max(max(1, requiredReadingMinutes), Int((Double(m) * 0.4).rounded()))
+        let spare = m - reading
+        let memoryLimit = spare < 5 ? 2 : 5
+        let rewire = spare >= 9 ? min(2, settings.rewirePerDay) : (spare >= 7 ? 1 : 0)
         let rewireCount = min(rewire, rewireAvailable)
 
         let steps = GateStep.allCases.filter { step in
             switch step {
             case .welcome, .unlock: return true
             case .scripture, .reflection: return settings.isEnabled(step)
-            case .memory: return settings.isEnabled(.memory) && hasDueMemoryVerses && m >= 4
-            case .journal: return settings.isEnabled(.journal) && m >= 8
+            case .memory: return settings.isEnabled(.memory) && hasDueMemoryVerses && spare >= 3
+            case .journal: return settings.isEnabled(.journal) && spare >= 5
             case .rewire: return settings.isEnabled(.rewire) && rewireCount > 0
             }
         }

@@ -36,7 +36,7 @@ final class BibleStore {
 @MainActor
 @Observable
 final class PlanStore {
-    static let seedIDs = ["bible-in-a-year", "nt-90", "psalms-proverbs", "gospels-45"]
+    static let seedIDs = ["bible-in-a-year", "nt-90", "psalms-proverbs", "gospels-45", "verse-a-day"]
 
     private(set) var seedPlans: [ReadingPlan] = []
 

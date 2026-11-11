@@ -23,15 +23,20 @@ It never locks you out of your own Mac. An emergency unlock, a Shift-key safe la
 | 6 | **Rewire** | 1–2 short exercises a day, rotating through the ones you've enabled: *Gratitude, specifically*, a *When–then plan* (implementation intention), a CBT-style *Thought reframe*, and *Walk through the day* (process visualization). |
 | 7 | **Unlock** | A summary card (streak, minutes in the Word, verses memorized). Then the gate goes away for the rest of the day. |
 
-**Session length.** The slider remembers your last choice. Reading gets about 40% of the time (1–6 minutes), and longer sessions add steps:
+**Session length.** The slider remembers your last choice. Its **minimum depends on today's reading**: Anchor counts the words and allows about 250 words a minute, a little above average silent reading speed.
+- **Short readings** (Verse a Day, a psalm) start at **2 minutes**.
+- **Bible in a Year** days (about 2,000 words) start at about **10 minutes**: roughly 9 to read and 1 to reflect.
+- The top of the slider is at least 10 minutes above the minimum.
 
-| Minutes | Session |
+Reading gets the time today's passage needs, or about 40% of the session if that's more. The spare minutes add steps:
+
+| Spare minutes after reading | Adds |
 |---|---|
-| 2–3 | Scripture, Reflection |
-| 4–7 | + Memory verse (if one is due, up to 2) |
-| 8–11 | + Journal |
-| 12–14 | + one Rewire exercise |
-| 15 | + a second Rewire exercise (if Settings allows two a day) |
+| any | Reflection |
+| 3+ | Memory verse (if one is due) |
+| 5+ | Journal |
+| 7+ | one Rewire exercise |
+| 9+ | a second Rewire exercise (if Settings allows two a day) |
 
 In Settings you can mark each of steps 2–6 *Required*, *Optional* (shows **Skip for today**) or *Off*. With the defaults, the whole session takes about 10–15 minutes.
 
@@ -46,6 +51,7 @@ If you restart partway through, Anchor resumes after the steps you've already fi
 | Psalms & Proverbs | 31 days | one Proverbs chapter per day of the month, plus about 5 Psalms |
 | The Gospels | 45 days | Matthew to John |
 | Custom | your choice | pick books and a number of days on the dashboard |
+| **Verse a Day** | 229 days | one well-known verse or short passage a day; about a minute of reading |
 | **Whole Bible, Shuffled** | 365 days | every verse exactly once, as a fresh mix of passages (≤25 verses each) from across the Bible each day; each shuffle is unique |
 
 The days are balanced by **verse count**, not chapter count, so each day's reading is about the same length.

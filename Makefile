@@ -17,6 +17,7 @@ test-core:          ## Pure-Swift logic only (also runs on Linux)
 
 data:               ## Rebuild bundled Bibles and plans from source downloads (see tools/)
 	python3 tools/build_plans.py Anchor/Resources/Bibles/KJV.json Anchor/Resources/Plans
+	python3 tools/build_verse_a_day.py Anchor/Resources/Bibles/KJV.json tools/verse_a_day.txt Anchor/Resources/Plans/verse-a-day.json
 
 clean:
 	rm -rf Anchor.xcodeproj build AnchorCore/.build

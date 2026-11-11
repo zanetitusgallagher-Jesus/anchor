@@ -57,22 +57,23 @@ struct WelcomeStep: View {
         }
         .onAppear {
             if minutes < 0 {
-                let r = SessionPlanner.range
+                let r = flow.minutesRange
                 minutes = Double(min(r.upperBound, max(r.lowerBound, settings.sessionMinutes)))
             }
         }
     }
 
     private var chosenMinutes: Int {
-        let r = SessionPlanner.range
-        return minutes < 0 ? SessionPlanner.defaultMinutes : min(r.upperBound, max(r.lowerBound, Int(minutes.rounded())))
+        let r = flow.minutesRange
+        let value = minutes < 0 ? model.settings.sessionMinutes : Int(minutes.rounded())
+        return min(r.upperBound, max(r.lowerBound, value))
     }
 
     private func begin() { flow.begin(minutes: chosenMinutes) }
 
     /// "How much time do you have today?" — 2 to 15 minutes.
     private var timePicker: some View {
-        let range = SessionPlanner.range
+        let range = flow.minutesRange
         let preview = flow.preview(minutes: chosenMinutes)
         return Card {
             VStack(alignment: .leading, spacing: 14) {
@@ -101,6 +102,12 @@ struct WelcomeStep: View {
                     .font(.callout)
                     .foregroundStyle(Theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
+                if let reading = flow.reading, flow.requiredReadingMinutes > 1 {
+                    Text("Today’s reading (\(reading.title)) is about \(flow.readingWords.formatted()) words, roughly \(flow.requiredReadingMinutes) minutes, so today’s session is at least \(range.lowerBound) minutes.")
+                        .font(.caption)
+                        .foregroundStyle(Theme.secondaryInk.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .frame(maxWidth: 560)
