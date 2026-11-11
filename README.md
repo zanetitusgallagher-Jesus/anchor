@@ -23,7 +23,14 @@ It never locks you out of your own Mac. An emergency unlock, a Shift-key safe la
 | 6 | **Rewire** | 1–2 short exercises a day, rotating through the ones you've enabled: *Gratitude, specifically*, a *When–then plan* (implementation intention), a CBT-style *Thought reframe*, and *Walk through the day* (process visualization). |
 | 7 | **Unlock** | A summary card (streak, minutes in the Word, verses memorized). Then the gate goes away for the rest of the day. |
 
-**Session length.** The slider remembers your last choice. Its **minimum depends on today's reading**: Anchor counts the words and allows about 250 words a minute, a little above average silent reading speed.
+**Short on time?** The slider always goes down to **2 minutes**. If you choose less time than today's main-plan reading needs (about 10 minutes on a Bible in a Year day), today switches to **Verse a Day** automatically:
+- your day and streak still count, and the 30-Day Challenge counts it too;
+- the main plan's reading isn't skipped, it waits for your next session (Bible in a Year pace shows you a day behind);
+- the dashboard marks these days in a lighter shade and lists them under *Recent sessions* as "Verse a Day · short on time".
+
+The Welcome screen always says what keeps you on your main plan ("10+ minutes keeps you on Bible in a Year. That's the goal."), and has a one-tap button to choose that.
+
+**Session length.** The slider remembers your last choice. When there's no short plan to fall back on (for example, when Verse a Day is already your main plan), its **minimum depends on today's reading**: Anchor counts the words and allows about 250 words a minute, a little above average silent reading speed.
 - **Short readings** (Verse a Day, a psalm) start at **2 minutes**.
 - **Bible in a Year** days (about 2,000 words) start at about **10 minutes**: roughly 9 to read and 1 to reflect.
 - The top of the slider is at least 10 minutes above the minimum.

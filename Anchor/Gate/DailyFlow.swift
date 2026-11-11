@@ -40,15 +40,29 @@ final class DailyFlow {
     let today = DayKey(.now)
     private(set) var steps: [GateStep]
     private(set) var index = 0
-    let reading: TodayReading?
+    /// The reading for this session: from the main plan, or from Verse a Day
+    /// when less time was chosen than the main reading needs.
+    private(set) var reading: TodayReading?
+    /// Today's day of the main plan (e.g. Bible in a Year).
+    let mainReading: TodayReading?
+    /// The short fallback (Verse a Day), if the main plan isn't already it.
+    let shortReading: TodayReading?
     let prompt: ReflectionPrompt
     private(set) var rewireToday: [RewireExercise]
     /// Today's shape, chosen with the Welcome screen's time slider.
     private(set) var plan: SessionPlan
-    /// Words in today's reading, and the minutes they take (sets the slider's minimum).
+    /// Words in the main plan's reading today, and the minutes they take.
     let readingWords: Int
     let requiredReadingMinutes: Int
-    var minutesRange: ClosedRange<Int> { SessionPlanner.range(requiredReadingMinutes: requiredReadingMinutes) }
+    var minutesRange: ClosedRange<Int> {
+        SessionPlanner.sliderRange(mainRequiredMinutes: requiredReadingMinutes, hasShortPlan: shortReading != nil)
+    }
+    /// The fewest minutes that keep today on the main plan.
+    var mainPlanMinimum: Int { SessionPlanner.mainPlanMinimum(mainRequiredMinutes: requiredReadingMinutes) }
+
+    func choice(minutes: Int) -> SessionPlanner.ReadingChoice {
+        SessionPlanner.choice(minutes: minutes, mainRequiredMinutes: requiredReadingMinutes, hasShortPlan: shortReading != nil)
+    }
     var readingSeconds: Double = 0
     var reflectionAnswer = ""
 
@@ -58,22 +72,35 @@ final class DailyFlow {
         let settings = model.settings
         let store = model.store
         prompt = ReflectionPrompt.forDay(today)
-        if let r = model.todaysReading() {
-            reading = TodayReading(plan: r.plan, dayIndex: r.dayIndex, chapters: r.chapters)
-        } else {
-            reading = nil
-        }
-        let words = reading.map { r in
-            ReadingEstimate.words(in: r.chapters.flatMap { model.localBible?.verses($0).map(\.text) ?? [] })
-        } ?? 0
+        let main = model.todaysReading().map { TodayReading(plan: $0.plan, dayIndex: $0.dayIndex, chapters: $0.chapters) }
+        let short = model.shortReading().map { TodayReading(plan: $0.plan, dayIndex: $0.dayIndex, chapters: $0.chapters) }
+        mainReading = main
+        shortReading = short
+        let words = Self.words(main, model: model)
         readingWords = words
         requiredReadingMinutes = ReadingEstimate.minutes(words: words)
-        let built = Self.build(minutes: settings.sessionMinutes, model: model, today: today,
-                               requiredReading: requiredReadingMinutes)
+        let minutes = settings.sessionMinutes
+        let useShort = short != nil && SessionPlanner.choice(minutes: minutes, mainRequiredMinutes: requiredReadingMinutes,
+                                                             hasShortPlan: true) == .short
+        reading = useShort ? short : main
+        let built = Self.build(minutes: minutes, model: model, today: today,
+                               requiredReading: ReadingEstimate.minutes(words: Self.words(useShort ? short : main, model: model)))
         plan = built.plan
         rewireToday = built.rewire
         steps = built.steps
         readingSeconds = store.session(for: today, create: false)?.readingSeconds ?? 0
+    }
+
+    private static func words(_ r: TodayReading?, model: AppModel) -> Int {
+        guard let r else { return 0 }
+        return ReadingEstimate.words(in: r.chapters.flatMap { model.localBible?.verses($0).map(\.text) ?? [] })
+    }
+
+    /// The reading and session shape for a slider value.
+    private func shape(minutes: Int) -> (reading: TodayReading?, built: (plan: SessionPlan, rewire: [RewireExercise], steps: [GateStep])) {
+        let r = choice(minutes: minutes) == .short ? shortReading : mainReading
+        let need = ReadingEstimate.minutes(words: Self.words(r, model: model))
+        return (r, Self.build(minutes: minutes, model: model, today: today, requiredReading: need))
     }
 
     private static func build(minutes: Int, model: AppModel, today: DayKey, requiredReading: Int)
@@ -94,7 +121,9 @@ final class DailyFlow {
     /// Called from the Welcome screen's Begin button with the slider's value.
     func begin(minutes: Int) {
         model.settings.sessionMinutes = minutes
-        let built = Self.build(minutes: minutes, model: model, today: today, requiredReading: requiredReadingMinutes)
+        let shaped = shape(minutes: minutes)
+        reading = shaped.reading
+        let built = shaped.built
         plan = built.plan
         rewireToday = built.rewire
         steps = built.steps
@@ -104,7 +133,7 @@ final class DailyFlow {
 
     /// Preview for the slider: what a session of `minutes` would include.
     func preview(minutes: Int) -> SessionPlan {
-        Self.build(minutes: minutes, model: model, today: today, requiredReading: requiredReadingMinutes).plan
+        shape(minutes: minutes).built.plan
     }
 
     var current: GateStep { steps[min(index, steps.count - 1)] }
@@ -135,6 +164,8 @@ final class DailyFlow {
         if let s = store.session(for: today) {
             s.readingSeconds = readingSeconds
             s.passage = reading.title
+            s.planID = reading.plan.id
+            s.planName = reading.plan.name
             store.save()
         }
         advance()

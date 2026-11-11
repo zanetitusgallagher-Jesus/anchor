@@ -105,6 +105,34 @@ public enum SessionPlanner {
                            memoryLimit: memoryLimit, rewireCount: rewireCount)
     }
 
+    // MARK: Short on time
+
+    /// Which plan today's reading comes from.
+    public enum ReadingChoice: Equatable, Sendable {
+        /// The user's main plan (e.g. Bible in a Year).
+        case main
+        /// The short fallback (Verse a Day) because less time was chosen than
+        /// the main reading needs. The main plan's day waits for tomorrow.
+        case short
+    }
+
+    /// The fewest minutes that keep the user on their main plan today.
+    public static func mainPlanMinimum(mainRequiredMinutes: Int) -> Int {
+        range(requiredReadingMinutes: mainRequiredMinutes).lowerBound
+    }
+
+    /// The slider's range. With a short fallback available, it always starts
+    /// at 2 minutes; without one, it starts at what the main reading needs.
+    public static func sliderRange(mainRequiredMinutes: Int, hasShortPlan: Bool) -> ClosedRange<Int> {
+        let main = range(requiredReadingMinutes: mainRequiredMinutes)
+        return hasShortPlan ? range.lowerBound...main.upperBound : main
+    }
+
+    public static func choice(minutes: Int, mainRequiredMinutes: Int, hasShortPlan: Bool) -> ReadingChoice {
+        guard hasShortPlan else { return .main }
+        return minutes >= mainPlanMinimum(mainRequiredMinutes: mainRequiredMinutes) ? .main : .short
+    }
+
     public static func readingSecondsRemaining(elapsed: Double, readingMinutes: Int) -> Double {
         max(0, Double(readingMinutes) * 60 - elapsed)
     }

@@ -79,6 +79,9 @@ struct OverviewPanel: View {
         let unlocked = store.unlockedDays()
         let today = DayKey(.now)
         let decision = model.gate.currentDecision()
+        let sessions = store.sessions().filter { $0.completedAt != nil }
+        let shortDays = model.settings.planID == AppModel.shortPlanID ? Set<DayKey>() :
+            Set(sessions.filter { $0.planID == AppModel.shortPlanID }.compactMap { DayKey(string: $0.dayKey) })
 
         VStack(alignment: .leading, spacing: 24) {
             PanelTitle(title: "Overview", subtitle: done.contains(today) ? "Today’s session is complete." : "Today’s session is waiting.")
@@ -93,9 +96,10 @@ struct OverviewPanel: View {
             Card {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Last 26 weeks").font(.headline)
-                    StreakHeatmap(completed: done, unlocked: unlocked, today: today, weeks: 26)
+                    StreakHeatmap(completed: done, unlocked: unlocked, short: shortDays, today: today, weeks: 26)
                     HStack(spacing: 14) {
                         legend(Theme.heat, "Completed")
+                        if !shortDays.isEmpty { legend(Theme.heat.opacity(0.4), "Verse a Day (short on time)") }
                         legend(Theme.hairline, "Missed")
                         HStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 2).strokeBorder(Theme.accent, lineWidth: 1).frame(width: 10, height: 10)
@@ -103,6 +107,17 @@ struct OverviewPanel: View {
                         }
                     }
                     .font(.caption).foregroundStyle(Theme.secondaryInk)
+                }
+            }
+
+            if !sessions.isEmpty {
+                Card {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Recent sessions").font(.headline)
+                        ForEach(sessions.suffix(7).reversed(), id: \.dayKey) { s in
+                            RecentSessionRow(session: s, isShort: s.planID == AppModel.shortPlanID && !shortDays.isEmpty)
+                        }
+                    }
                 }
             }
 
@@ -162,6 +177,34 @@ struct FocusStatusRow: View {
     }
 }
 
+struct RecentSessionRow: View {
+    let session: DailySession
+    let isShort: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Text(DayKey(string: session.dayKey)?.date().formatted(.dateTime.weekday(.abbreviated).month().day()) ?? session.dayKey)
+                .font(.callout.monospacedDigit())
+                .frame(width: 92, alignment: .leading)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(session.planName ?? "Reading").font(.system(size: 14, weight: .medium))
+                    if isShort {
+                        Text("short on time").font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 1)
+                            .background(Theme.hairline, in: Capsule())
+                    }
+                }
+                if let p = session.passage {
+                    Text(p).font(.caption).foregroundStyle(Theme.secondaryInk).lineLimit(1)
+                }
+            }
+            Spacer()
+            Text("\(max(1, Int(session.readingSeconds / 60))) min").font(.caption.monospacedDigit()).foregroundStyle(Theme.secondaryInk)
+        }
+    }
+}
+
 struct StatTile: View {
     let value: String
     let label: String
@@ -183,6 +226,7 @@ struct StatTile: View {
 struct StreakHeatmap: View {
     let completed: Set<DayKey>
     let unlocked: Set<DayKey>
+    var short: Set<DayKey> = []
     let today: DayKey
     let weeks: Int
     private let cell: CGFloat = 13
@@ -206,8 +250,9 @@ struct StreakHeatmap: View {
         if day > today {
             Color.clear.frame(width: cell, height: cell)
         } else if completed.contains(day) {
-            RoundedRectangle(cornerRadius: 3).fill(Theme.heat).frame(width: cell, height: cell)
-                .help("\(day): completed")
+            RoundedRectangle(cornerRadius: 3).fill(short.contains(day) ? Theme.heat.opacity(0.4) : Theme.heat)
+                .frame(width: cell, height: cell)
+                .help(short.contains(day) ? "\(day): completed with Verse a Day" : "\(day): completed")
         } else if unlocked.contains(day) {
             RoundedRectangle(cornerRadius: 3).strokeBorder(Theme.accent, lineWidth: 1).frame(width: cell, height: cell)
                 .help("\(day): emergency unlock")

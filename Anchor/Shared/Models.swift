@@ -12,6 +12,9 @@ final class DailySession {
     var completedAt: Date?
     var readingSeconds: Double = 0
     var passage: String?
+    /// Which plan today's reading came from (Verse a Day on short-on-time days).
+    var planID: String?
+    var planName: String?
     var reflectionPrompt: String?
     /// Encrypted `ReflectionRecord`.
     var reflectionCipher: Data?

@@ -80,6 +80,19 @@ final class SessionPlannerTests: XCTestCase {
         XCTAssertEqual(ReadingEstimate.words(in: ["For God so loved", "the world."]), 6)
     }
 
+    func testShortOnTimeSwitchesToTheShortPlan() {
+        // Bible in a Year day needs 9 minutes of reading -> 10 minutes keeps you on it.
+        XCTAssertEqual(SessionPlanner.mainPlanMinimum(mainRequiredMinutes: 9), 10)
+        XCTAssertEqual(SessionPlanner.sliderRange(mainRequiredMinutes: 9, hasShortPlan: true), 2...20)
+        XCTAssertEqual(SessionPlanner.sliderRange(mainRequiredMinutes: 9, hasShortPlan: false), 10...20)
+        XCTAssertEqual(SessionPlanner.choice(minutes: 2, mainRequiredMinutes: 9, hasShortPlan: true), .short)
+        XCTAssertEqual(SessionPlanner.choice(minutes: 9, mainRequiredMinutes: 9, hasShortPlan: true), .short)
+        XCTAssertEqual(SessionPlanner.choice(minutes: 10, mainRequiredMinutes: 9, hasShortPlan: true), .main)
+        XCTAssertEqual(SessionPlanner.choice(minutes: 2, mainRequiredMinutes: 9, hasShortPlan: false), .main)
+        // A short main plan never needs the fallback.
+        XCTAssertEqual(SessionPlanner.choice(minutes: 2, mainRequiredMinutes: 1, hasShortPlan: true), .main)
+    }
+
     func testReadingTimer() {
         XCTAssertEqual(SessionPlanner.readingSecondsRemaining(elapsed: 30, readingMinutes: 1), 30)
         XCTAssertEqual(SessionPlanner.readingSecondsRemaining(elapsed: 90, readingMinutes: 1), 0)

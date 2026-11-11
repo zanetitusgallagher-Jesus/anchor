@@ -48,6 +48,25 @@ final class AppModel {
     /// Next unread day of the current plan. Missing days never skip readings.
     func todaysReading() -> (plan: ReadingPlan, dayIndex: Int, chapters: [ChapterRef])? {
         guard let plan = currentPlan else { return nil }
+        return reading(in: plan)
+    }
+
+    static let shortPlanID = "verse-a-day"
+
+    /// The short fallback for days with little time, unless it's already the main plan.
+    /// It starts over after its last day.
+    func shortReading() -> (plan: ReadingPlan, dayIndex: Int, chapters: [ChapterRef])? {
+        guard settings.planID != Self.shortPlanID,
+              let plan = plans.plan(id: Self.shortPlanID, custom: [], bible: localBible) else { return nil }
+        if let r = reading(in: plan) { return r }
+        let record = store.progress(for: plan.id)
+        record.completedDays = []
+        record.completedDates = []
+        store.save()
+        return reading(in: plan)
+    }
+
+    private func reading(in plan: ReadingPlan) -> (plan: ReadingPlan, dayIndex: Int, chapters: [ChapterRef])? {
         let record = store.progress(for: plan.id)
         let progress = PlanProgress(planID: plan.id, completedDays: Set(record.completedDays))
         // If today's reading was already finished in this session, keep showing it.

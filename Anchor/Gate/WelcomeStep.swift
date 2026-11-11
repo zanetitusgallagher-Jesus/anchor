@@ -102,15 +102,44 @@ struct WelcomeStep: View {
                     .font(.callout)
                     .foregroundStyle(Theme.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
-                if let reading = flow.reading, flow.requiredReadingMinutes > 1 {
-                    Text("Today’s reading (\(reading.title)) is about \(flow.readingWords.formatted()) words, roughly \(flow.requiredReadingMinutes) minutes, so today’s session is at least \(range.lowerBound) minutes.")
-                        .font(.caption)
-                        .foregroundStyle(Theme.secondaryInk.opacity(0.8))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                planNote
+
             }
         }
         .frame(maxWidth: 560)
+    }
+
+    /// Explains which plan today's choice reads from, and nudges toward the main plan.
+    @ViewBuilder private var planNote: some View {
+        if let main = flow.mainReading, let short = flow.shortReading {
+            let goal = flow.mainPlanMinimum
+            if flow.choice(minutes: chosenMinutes) == .short {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("Short on time? Today will be **Verse a Day** (\(short.title)), so your day still counts.",
+                          systemImage: "clock.badge.exclamationmark")
+                    Text("Your \(main.plan.name) reading (\(main.title)) will be waiting for you. **\(goal)+ minutes keeps you on \(main.plan.name). That’s the goal.**")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button("Use \(goal) minutes") { minutes = Double(goal) }
+                        .buttonStyle(.bordered)
+                        .tint(Theme.accent)
+                }
+                .font(.callout)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Theme.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+            } else {
+                Label("\(main.plan.name): \(main.title), about \(flow.readingWords.formatted()) words. Under \(goal) minutes switches today to Verse a Day.",
+                      systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(Theme.secondaryInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else if let main = flow.mainReading, flow.requiredReadingMinutes > 1 {
+            Text("Today’s reading (\(main.title)) is about \(flow.readingWords.formatted()) words, roughly \(flow.requiredReadingMinutes) minutes, so today’s session is at least \(flow.minutesRange.lowerBound) minutes.")
+                .font(.caption)
+                .foregroundStyle(Theme.secondaryInk.opacity(0.8))
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     private func describe(_ p: SessionPlan) -> String {
