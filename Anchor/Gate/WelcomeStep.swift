@@ -24,6 +24,11 @@ struct WelcomeStep: View {
                         .font(.callout)
                         .foregroundStyle(Theme.accent)
                 }
+                ForEach(model.challengeStatuses(), id: \.challenge.id) { item in
+                    Label(ChallengeTracker.summary(item.challenge, item.status), systemImage: "flag")
+                        .font(.callout)
+                        .foregroundStyle(Theme.secondaryInk)
+                }
             }
 
             VStack(spacing: 10) {

@@ -49,8 +49,18 @@ final class PlanStore {
         }
     }
 
-    func plan(id: String, custom: [CustomPlanRecord], bible: Bible?) -> ReadingPlan? {
+    @ObservationIgnored private var generated: [String: ReadingPlan] = [:]
+
+    /// - Parameter structure: a translation used for verse counts (always KJV,
+    ///   so a shuffled plan never changes when the reading translation does).
+    func plan(id: String, custom: [CustomPlanRecord], bible: Bible?, structure: Bible? = nil) -> ReadingPlan? {
         if let p = seedPlans.first(where: { $0.id == id }) { return p }
+        if let seed = ReadingPlanGenerator.seed(fromShuffledID: id), let structure {
+            if let cached = generated[id] { return cached }
+            let p = ReadingPlanGenerator.shuffledWholeBible(verseCounts: ReadingPlanGenerator.verseCounts(of: structure), seed: seed)
+            generated[id] = p
+            return p
+        }
         if let c = custom.first(where: { $0.planID == id }) {
             return ReadingPlanGenerator.custom(id: c.planID, name: c.name, bookIDs: c.bookIDs, days: c.days, bible: bible)
         }

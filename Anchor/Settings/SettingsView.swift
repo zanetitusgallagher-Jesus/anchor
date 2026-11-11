@@ -170,8 +170,11 @@ struct ScriptureSettings: View {
             Picker("Reading plan", selection: bind(model, \.planID)) {
                 ForEach(model.plans.seedPlans) { Text($0.name).tag($0.id) }
                 ForEach(model.customPlans()) { Text($0.name).tag($0.planID) }
+                if ReadingPlanGenerator.seed(fromShuffledID: model.settings.planID) != nil {
+                    Text("Whole Bible, Shuffled").tag(model.settings.planID)
+                }
             }
-            Text("Create custom plans from the dashboard’s Reading plan page.").font(.caption).foregroundStyle(.secondary)
+            Text("Create custom or shuffled plans from the dashboard’s Reading plan page.").font(.caption).foregroundStyle(.secondary)
 
             Picker("Translation", selection: bind(model, \.translationID)) {
                 ForEach(BibleStore.bundled, id: \.id) { Text("\($0.id) — \($0.name)").tag($0.id) }

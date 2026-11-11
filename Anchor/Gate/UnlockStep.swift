@@ -28,6 +28,11 @@ struct UnlockStep: View {
             }
             .frame(maxWidth: 620)
 
+            ForEach(model.challengeStatuses(countingToday: true), id: \.challenge.id) { item in
+                ChallengeProgressRow(challenge: item.challenge, status: item.status)
+                    .frame(maxWidth: 620)
+            }
+
             if let reading = flow.reading {
                 Text("Today: \(reading.title) · \(minutesToday) min")
                     .font(.callout)

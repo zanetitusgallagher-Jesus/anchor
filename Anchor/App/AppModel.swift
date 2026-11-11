@@ -42,7 +42,7 @@ final class AppModel {
     }
 
     var currentPlan: ReadingPlan? {
-        plans.plan(id: settings.planID, custom: customPlans(), bible: localBible)
+        plans.plan(id: settings.planID, custom: customPlans(), bible: localBible, structure: bibles.bible("KJV"))
     }
 
     /// Next unread day of the current plan. Missing days never skip readings.
@@ -61,4 +61,35 @@ final class AppModel {
     }
 
     func touch() { revision += 1 }
+
+    // MARK: Challenges
+
+    func challengeStatuses(countingToday: Bool = false) -> [(challenge: Challenge, status: ChallengeStatus)] {
+        let today = DayKey(.now)
+        var done = store.completedDays()
+        if countingToday { done.insert(today) }
+        return settings.challenges.map { c in
+            let read = c.planID.map { store.progress(for: $0).completedDays.count } ?? 0
+            return (c, ChallengeTracker.status(c, today: today, completedDays: done, planDaysRead: read))
+        }
+    }
+
+    /// Starts (or restarts) a challenge. Bible in a Year begins a freshly
+    /// shuffled whole-Bible plan and makes it the current reading plan.
+    func startChallenge(_ kind: Challenge.Kind) {
+        var c = Challenge(kind: kind, startedOn: DayKey(.now))
+        if kind == .bibleInAYear {
+            let id = ReadingPlanGenerator.shuffledID(seed: UInt64.random(in: 1...999_999_999))
+            c.planID = id
+            settings.planID = id
+        }
+        settings.challenges.removeAll { $0.kind == kind }
+        settings.challenges.append(c)
+        touch()
+    }
+
+    func endChallenge(_ kind: Challenge.Kind) {
+        settings.challenges.removeAll { $0.kind == kind }
+        touch()
+    }
 }

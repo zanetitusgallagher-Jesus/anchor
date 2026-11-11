@@ -89,6 +89,9 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
     // Focus hours (app pausing after the gate is cleared)
     public var focus = FocusSchedule()
 
+    /// Active challenges (at most one of each kind).
+    public var challenges: [Challenge] = []
+
     // AI (off by default)
     public var aiReflectionEnabled = false
     public var aiModel = "claude-opus-5-5"
@@ -130,6 +133,7 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
         rewirePerDay = v(.rewirePerDay, d.rewirePerDay)
         appearance = v(.appearance, d.appearance)
         focus = v(.focus, d.focus)
+        challenges = v(.challenges, d.challenges)
         aiReflectionEnabled = v(.aiReflectionEnabled, d.aiReflectionEnabled)
         aiModel = v(.aiModel, d.aiModel)
     }

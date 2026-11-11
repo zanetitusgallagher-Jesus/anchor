@@ -4,12 +4,13 @@ import SwiftUI
 
 struct DashboardView: View {
     enum Section: String, CaseIterable, Identifiable {
-        case overview = "Overview", plan = "Reading plan", memory = "Memory verses"
+        case overview = "Overview", challenges = "Challenges", plan = "Reading plan", memory = "Memory verses"
         case journal = "Journal", prayers = "Answered prayers", log = "Unlock log"
         var id: String { rawValue }
         var icon: String {
             switch self {
             case .overview: "calendar"
+            case .challenges: "flag"
             case .plan: "book"
             case .memory: "brain.head.profile"
             case .journal: "square.and.pencil"
@@ -33,6 +34,7 @@ struct DashboardView: View {
                 Group {
                     switch section ?? .overview {
                     case .overview: OverviewPanel()
+                    case .challenges: ChallengesPanel()
                     case .plan: PlanPanel()
                     case .memory: MemoryPanel()
                     case .journal: JournalPanel()
@@ -253,6 +255,21 @@ struct PlanPanel: View {
             Text("Choose a plan").font(.headline)
             ForEach(plans) { p in planRow(p.id, p.name, p.summary) }
             ForEach(custom) { c in planRow(c.planID, c.name, "\(c.bookIDs.count) book(s) over \(c.days) days") }
+            if ReadingPlanGenerator.seed(fromShuffledID: model.settings.planID) == nil {
+                HStack {
+                    VStack(alignment: .leading) {
+                        Text("Whole Bible, Shuffled").font(.system(size: 15, weight: .medium))
+                        Text("Every verse in 365 days, as a fresh mix of passages from across the Bible each day.")
+                            .font(.caption).foregroundStyle(Theme.secondaryInk)
+                    }
+                    Spacer()
+                    Button("Start a shuffle") {
+                        model.settings.planID = ReadingPlanGenerator.shuffledID(seed: UInt64.random(in: 1...999_999_999))
+                        model.touch()
+                    }
+                }
+                .padding(.vertical, 4)
+            }
             Button("Create a custom plan…") { showBuilder = true }
         }
         .sheet(isPresented: $showBuilder) { CustomPlanBuilder() }

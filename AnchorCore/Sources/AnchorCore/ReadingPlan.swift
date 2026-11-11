@@ -57,6 +57,62 @@ public enum ReadingPlanGenerator {
     }
 }
 
+extension ReadingPlanGenerator {
+    public static let shuffledPrefix = "shuffled-"
+
+    /// The id of a shuffled whole-Bible plan for a seed.
+    public static func shuffledID(seed: UInt64) -> String { "\(shuffledPrefix)\(seed)" }
+
+    public static func seed(fromShuffledID id: String) -> UInt64? {
+        guard id.hasPrefix(shuffledPrefix) else { return nil }
+        return UInt64(id.dropFirst(shuffledPrefix.count))
+    }
+
+    /// The whole Bible in a random order: every chapter is cut into passages of
+    /// at most `maxVerses`, the passages are shuffled (deterministically for
+    /// `seed`), and then grouped into `days` days of roughly equal length.
+    /// Each day lists its passages in canonical order. Every verse is read
+    /// exactly once by the last day.
+    ///
+    /// - Parameter verseCounts: verses per chapter, `[bookID: [count per chapter]]`.
+    public static func shuffledWholeBible(verseCounts: [String: [Int]], days: Int = 365, seed: UInt64,
+                                          maxVerses: Int = 25) -> ReadingPlan {
+        var passages: [(ref: ChapterRef, weight: Double)] = []
+        for book in BookCatalog.all {
+            guard let counts = verseCounts[book.id] else { continue }
+            for (ci, n) in counts.enumerated() where n > 0 {
+                let parts = Int((Double(n) / Double(maxVerses)).rounded(.up))
+                for p in 0..<parts {
+                    let start = p * n / parts + 1
+                    let end = (p + 1) * n / parts
+                    let ref = parts == 1
+                        ? ChapterRef(bookID: book.id, chapter: ci + 1)
+                        : ChapterRef(bookID: book.id, chapter: ci + 1,
+                                     verseStart: start, verseEnd: p == parts - 1 ? nil : end)
+                    passages.append((ref, Double(end - start + 1)))
+                }
+            }
+        }
+        var rng = SplitMix64(seed: seed)
+        for i in stride(from: passages.count - 1, to: 0, by: -1) {
+            passages.swapAt(i, Int(rng.next() % UInt64(i + 1)))
+        }
+        let grouped = split(passages.map(\.ref), weights: passages.map(\.weight), days: days)
+        let ordered = grouped.map { day in
+            day.sorted { a, b in
+                (BookCatalog.order(a.bookID), a.chapter, a.verseStart ?? 0) < (BookCatalog.order(b.bookID), b.chapter, b.verseStart ?? 0)
+            }
+        }
+        return ReadingPlan(id: shuffledID(seed: seed), name: "Whole Bible, Shuffled",
+                           summary: "Every verse of the Bible in \(days) days, as a fresh mix of passages from across Scripture each day.",
+                           days: ordered)
+    }
+
+    public static func verseCounts(of bible: Bible) -> [String: [Int]] {
+        Dictionary(uniqueKeysWithValues: bible.books.map { ($0.id, $0.chapters.map(\.count)) })
+    }
+}
+
 /// Progress through a plan is tracked by completed day indices, not by calendar
 /// date: missing a day never skips a reading, it just shifts the finish date.
 public struct PlanProgress: Codable, Equatable, Sendable {

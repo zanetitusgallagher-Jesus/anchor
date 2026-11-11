@@ -16,16 +16,18 @@ final class DailyFlow {
         }
 
         /// "Genesis 1–3" or "Psalms 1–5, Proverbs 1".
+        /// "Genesis 1–3", "Psalms 1–5, Proverbs 1", "Isaiah 40:1–15, John 6:22–end".
         static func describe(_ chapters: [ChapterRef]) -> String {
-            var groups: [(book: String, first: Int, last: Int)] = []
+            var groups: [(book: String, first: Int, last: Int, range: ChapterRef?)] = []
             for c in chapters {
-                if let g = groups.last, g.book == c.bookID, g.last + 1 == c.chapter {
+                if c.isWholeChapter, let g = groups.last, g.range == nil, g.book == c.bookID, g.last + 1 == c.chapter {
                     groups[groups.count - 1].last = c.chapter
                 } else {
-                    groups.append((c.bookID, c.chapter, c.chapter))
+                    groups.append((c.bookID, c.chapter, c.chapter, c.isWholeChapter ? nil : c))
                 }
             }
             return groups.map { g in
+                if let r = g.range { return r.description }
                 let name = BookCatalog.name(g.book)
                 return g.first == g.last ? "\(name) \(g.first)" : "\(name) \(g.first)–\(g.last)"
             }.joined(separator: ", ")

@@ -16,10 +16,14 @@ public struct Bible: Codable, Sendable {
 
     public func book(_ id: String) -> Book? { books.first { $0.id == id } }
 
+    /// The verses of a chapter, or of the range `ref` names within it.
     public func verses(_ ref: ChapterRef) -> [Verse] {
         guard let b = book(ref.bookID), ref.chapter >= 1, ref.chapter <= b.chapters.count else { return [] }
         return b.chapters[ref.chapter - 1].enumerated().compactMap { i, text in
-            text.isEmpty ? nil : Verse(ref: VerseRef(bookID: ref.bookID, chapter: ref.chapter, verse: i + 1), text: text)
+            let n = i + 1
+            if let s = ref.verseStart, n < s { return nil }
+            if let e = ref.verseEnd, n > e { return nil }
+            return text.isEmpty ? nil : Verse(ref: VerseRef(bookID: ref.bookID, chapter: ref.chapter, verse: n), text: text)
         }
     }
 
@@ -45,16 +49,39 @@ public struct Verse: Hashable, Sendable, Identifiable {
     }
 }
 
+/// A chapter, or a range of verses within one. `verseStart`/`verseEnd` are
+/// nil for "from the start" / "to the end of the chapter", so whole chapters
+/// and open-ended ranges work across translations with different verse counts.
 public struct ChapterRef: Hashable, Codable, Sendable, CustomStringConvertible {
     public let bookID: String
     public let chapter: Int
-    public init(bookID: String, chapter: Int) {
+    public let verseStart: Int?
+    public let verseEnd: Int?
+
+    public init(bookID: String, chapter: Int, verseStart: Int? = nil, verseEnd: Int? = nil) {
         self.bookID = bookID
         self.chapter = chapter
+        self.verseStart = verseStart
+        self.verseEnd = verseEnd
     }
-    public var description: String { "\(BookCatalog.name(bookID)) \(chapter)" }
-    /// API.Bible passage id, e.g. "JHN.3".
-    public var apiBibleID: String { "\(bookID).\(chapter)" }
+
+    public var isWholeChapter: Bool { (verseStart ?? 1) <= 1 && verseEnd == nil }
+
+    /// "John 3", "John 3:1–18", "John 3:19–end".
+    public var description: String {
+        let base = "\(BookCatalog.name(bookID)) \(chapter)"
+        if isWholeChapter { return base }
+        let s = verseStart ?? 1
+        if let e = verseEnd { return s == e ? "\(base):\(s)" : "\(base):\(s)–\(e)" }
+        return "\(base):\(s)–end"
+    }
+
+    /// API.Bible id: "JHN.3" for a chapter, "JHN.3.1-JHN.3.18" for a range.
+    /// An open-ended range is requested as the whole chapter.
+    public var apiBibleID: String {
+        guard let e = verseEnd else { return "\(bookID).\(chapter)" }
+        return "\(bookID).\(chapter).\(verseStart ?? 1)-\(bookID).\(chapter).\(e)"
+    }
 }
 
 public struct VerseRef: Hashable, Codable, Sendable, CustomStringConvertible, Comparable {

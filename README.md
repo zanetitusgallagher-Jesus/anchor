@@ -46,6 +46,7 @@ If you restart partway through, Anchor resumes after the steps you've already fi
 | Psalms & Proverbs | 31 days | one Proverbs chapter per day of the month, plus about 5 Psalms |
 | The Gospels | 45 days | Matthew to John |
 | Custom | your choice | pick books and a number of days on the dashboard |
+| **Whole Bible, Shuffled** | 365 days | every verse exactly once, as a fresh mix of passages (≤25 verses each) from across the Bible each day; each shuffle is unique |
 
 The days are balanced by **verse count**, not chapter count, so each day's reading is about the same length.
 
@@ -118,6 +119,13 @@ The trade-offs:
 The schedule logic is in `AnchorCore/Focus.swift`, with unit tests.
 
 ---
+
+## Challenges
+
+Start these from Dashboard → **Challenges**. Their progress shows on the Welcome screen, on the Unlock card and on the dashboard.
+
+- **30-Day Challenge.** Complete your morning session on 30 days, starting today. Badges at 7, 14, 21 and 30 days. When the 30 days are up, you'll see how many you completed, and you can start again.
+- **Bible in a Year.** Starting it begins a new **Whole Bible, Shuffled** plan and makes it your reading plan. Every day is a different mix of passages from across Scripture, and after 365 reading days you've read every verse once. Anchor shows whether you're on pace (for example "2 days ahead"). Badges at 30 days, 100 days, halfway and the whole Bible. Missed days never skip a reading; you just fall a little behind pace.
 
 ## Dashboard and menu bar
 
@@ -238,6 +246,7 @@ anchor/
 │   │   ├── DailyContent.swift  reflection rotation, Rewire scheduler, box breathing
 │   │   ├── Journal.swift       templates, tags, search, Markdown export
 │   │   ├── Focus.swift         focus-hours schedule, overnight windows, pause rules
+│   │   ├── Challenge.swift     30-day and Bible-in-a-year challenge progress, pace, milestones
 │   │   └── Summary.swift       flow steps, summary numbers
 │   └── Tests/AnchorCoreTests/  SM-2, streak, gate-state, plan, recall, content tests
 ├── Anchor/                     the macOS app
@@ -255,7 +264,7 @@ anchor/
 │       ├── Bibles/KJV.json, WEB.json   (31,102 verses each, compact JSON)
 │       └── Plans/*.json                (4 seed plans)
 ├── AnchorTests/                app-level tests (in-memory store, encryption, bundled data)
-└── tools/                      scripts that rebuilt the seed data
+└── tools/                      scripts that rebuilt the seed data and draw the app icon (make_icon.py)
 ```
 
 ### Seed data provenance
