@@ -134,6 +134,22 @@ The **Dashboard** has these pages:
 
 ---
 
+## Install without Xcode
+
+Every push to `main` is built on GitHub's Mac servers and published as **Anchor.zip** on the [latest release](https://github.com/zanetitusgallagher-Jesus/anchor/releases/tag/latest). It's a universal app, so it runs on both Apple silicon and Intel Macs, and it needs **macOS 14 Sonoma or later**.
+
+Install it with one command in **Terminal**:
+
+```bash
+curl -L -o /tmp/Anchor.zip https://github.com/zanetitusgallagher-Jesus/anchor/releases/download/latest/Anchor.zip && ditto -x -k /tmp/Anchor.zip /Applications && open /Applications/Anchor.app
+```
+
+Run the same command again whenever you want to update.
+
+If you download the zip in a browser instead, macOS will say the app "can't be opened" because it isn't signed by an identified developer. Go to **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to the Anchor message. You only need to do this once.
+
+> These builds are ad-hoc signed, not signed with an Apple Developer ID or notarized. That's fine on your own Mac. To share Anchor with other people, build it with a Developer ID as described below.
+
 ## Build and run
 
 ### Requirements
