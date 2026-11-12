@@ -25,9 +25,15 @@ final class NarrationTimingTests: XCTestCase {
 
     /// Speech at level 1.0 with pauses (0.02) at 10.0–10.5 s and 13.0–13.5 s.
     private func levels(step: Double = 0.05, from: Double = 5, to: Double = 20) -> [Float] {
-        stride(from: from, to: to, by: step).map { t in
-            (t >= 10 && t < 10.5) || (t >= 13 && t < 13.5) ? 0.02 : 1.0
+        var out: [Float] = []
+        var t = from
+        while t < to - step / 2 {
+            let inFirstPause = t >= 10 && t < 10.5
+            let inSecondPause = t >= 13 && t < 13.5
+            out.append(inFirstPause || inSecondPause ? 0.02 : 1.0)
+            t += step
         }
+        return out
     }
 
     func testSnapsToTheNearestPause() {
