@@ -97,6 +97,23 @@ final class GatePolicyTests: XCTestCase {
         XCTAssertTrue(EmergencyUnlock.holdComplete(heldSeconds: 30))
     }
 
+    func testGateShowsAnyTimeByDefault() {
+        let ctx = GateContext(now: date("2026-03-10", hour: 21), completedDays: [])
+        XCTAssertEqual(GatePolicy.evaluate(ctx, settings: AnchorSettings(), calendar: utc), .show)
+    }
+
+    func testOldSettingsMigrateToAnyTime() throws {
+        let old = #"{"graceCutoffHour": 11, "minimumReadingMinutes": 5}"#
+        let s = try AnchorSettings.decodeMigrating(Data(old.utf8))
+        XCTAssertEqual(s.graceCutoffHour, 24)
+        XCTAssertEqual(s.settingsVersion, AnchorSettings.currentVersion)
+        // A cutoff chosen after the migration is kept.
+        var chosen = s
+        chosen.graceCutoffHour = 9
+        let again = try AnchorSettings.decodeMigrating(JSONEncoder().encode(chosen))
+        XCTAssertEqual(again.graceCutoffHour, 9)
+    }
+
     func testSettingsDecodeToleratesMissingKeys() throws {
         let json = #"{"minimumReadingMinutes": 8, "unknownFutureKey": true}"#
         let s = try JSONDecoder().decode(AnchorSettings.self, from: Data(json.utf8))

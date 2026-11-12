@@ -44,16 +44,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.store.logUnlock(kind: "safeLaunch", reason: "Shift held at launch")
         }
 
-        // First run: register as a login item, as the user expects a morning gate.
-        if !model.settingsStore.hasCompletedOnboarding {
-            model.settingsStore.hasCompletedOnboarding = true
-            if model.settings.launchAtLogin, SMAppService.mainApp.status != .enabled {
-                try? SMAppService.mainApp.register()
+        // Keep the login item registered. Re-registering on every launch matters after
+        // an update: replacing the app can leave macOS's login record pointing at the
+        // old copy, and then Anchor silently stops opening at login.
+        model.settingsStore.hasCompletedOnboarding = true
+        if model.settings.launchAtLogin {
+            do {
+                try SMAppService.mainApp.register()
+                model.gate.log("login item registered (status: \(Self.describe(SMAppService.mainApp.status)))")
+            } catch {
+                model.gate.log("login item: \(error.localizedDescription) (status: \(Self.describe(SMAppService.mainApp.status)))")
             }
         }
 
         model.gate.start()
         model.focus.start()
+    }
+
+    static func describe(_ s: SMAppService.Status) -> String {
+        switch s {
+        case .enabled: "enabled"
+        case .requiresApproval: "needs approval in System Settings → General → Login Items"
+        case .notRegistered: "not registered"
+        case .notFound: "not found"
+        @unknown default: "unknown"
+        }
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
@@ -82,6 +97,8 @@ struct MenuBarContent: View {
             if doneToday {
                 Label("Today’s session is complete", systemImage: "checkmark.circle").foregroundStyle(Theme.secondaryInk)
             } else {
+                Text("Gate: \(GateController.describe(model.gate.currentDecision()).replacingOccurrences(of: "gate shown", with: "will show"))")
+                    .font(.caption).foregroundStyle(Theme.secondaryInk)
                 if let reading { Text("Today: \(DailyFlow.TodayReading.describe(reading.chapters))").font(.callout) }
                 Button("Start today’s session") { model.gate.present(.voluntary) }
                     .buttonStyle(PrimaryButtonStyle())

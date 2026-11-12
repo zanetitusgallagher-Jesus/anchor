@@ -53,7 +53,7 @@ struct GateSettings: View {
                 }
                 Text("Any time of day").tag(24)
             }
-            Text("If you first use your Mac after this time, the gate won’t appear that day. You can still start the session from the menu bar.")
+            Text("“Any time of day” (the default) shows the gate at every login, wake and unlock until today’s session is done. Choose an hour to skip the gate on days you first use your Mac after it.")
                 .font(.caption).foregroundStyle(.secondary)
 
             Section("Safety") {

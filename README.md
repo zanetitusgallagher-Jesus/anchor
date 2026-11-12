@@ -88,7 +88,7 @@ A day-change notification and a 60-second re-check catch the start of a new day.
 
 **When it appears.**
 - Only on the weekdays you choose.
-- Only if your first check of the day is before the **grace cutoff** (default 11:00). A gate that appeared at 10:55 stays up after 11:00; it doesn't vanish.
+- At **any time of day** by default: every login, wake and screen unlock shows the gate until today's session is done. Optionally set a cutoff hour in Settings → Gate so the gate only appears if your first use of the day is before it.
 - Never once today's session is complete or unlocked.
 
 The decision logic is pure Swift (`AnchorCore/GatePolicy.swift`) and unit-tested.

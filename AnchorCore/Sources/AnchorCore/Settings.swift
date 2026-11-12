@@ -51,8 +51,13 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
     /// 1 = Sunday ... 7 = Saturday.
     public var activeWeekdays: Set<Int> = Set(1...7)
     /// The gate only appears if the day's first check happens before this hour
-    /// (0-24, local time). 24 means "any time of day".
-    public var graceCutoffHour = 11
+    /// (0-24, local time). 24 means "any time of day": the gate appears at every
+    /// login, wake and unlock until today's session is done.
+    public var graceCutoffHour = 24
+
+    /// Bumped when a default changes in a way existing users should get too.
+    public static let currentVersion = 2
+    public var settingsVersion = AnchorSettings.currentVersion
     /// Safety valve: if the gate has been on screen this long, it releases
     /// itself (logged like an emergency unlock). 0 disables the valve.
     public var failsafeMinutes = 90
@@ -99,6 +104,17 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
     public init() {}
 
     public func isEnabled(_ step: GateStep) -> Bool { !disabledSteps.contains(step) }
+
+    /// Decodes saved settings and upgrades older ones.
+    /// v1 -> v2: the gate shows at any time of day (was: only before 11am).
+    public static func decodeMigrating(_ data: Data) throws -> AnchorSettings {
+        var s = try JSONDecoder().decode(AnchorSettings.self, from: data)
+        if s.settingsVersion < 2 {
+            s.graceCutoffHour = 24
+        }
+        s.settingsVersion = currentVersion
+        return s
+    }
     public func isRequired(_ step: GateStep) -> Bool {
         isEnabled(step) && !optionalSteps.contains(step)
     }
@@ -110,6 +126,7 @@ public struct AnchorSettings: Codable, Equatable, Sendable {
         func v<T: Decodable>(_ k: CodingKeys, _ fallback: T) -> T {
             (try? c.decodeIfPresent(T.self, forKey: k)) ?? fallback
         }
+        settingsVersion = v(.settingsVersion, 1)
         gateEnabled = v(.gateEnabled, d.gateEnabled)
         activeWeekdays = v(.activeWeekdays, d.activeWeekdays)
         graceCutoffHour = v(.graceCutoffHour, d.graceCutoffHour)

@@ -123,6 +123,21 @@ struct OverviewPanel: View {
 
             FocusStatusRow()
 
+            DisclosureGroup("Gate log (why the gate did or didn’t show)") {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(model.gate.logEntries.enumerated()), id: \.offset) { _, line in
+                        Text(line).font(.caption.monospaced()).foregroundStyle(Theme.secondaryInk)
+                            .textSelection(.enabled)
+                    }
+                    if model.gate.logEntries.isEmpty {
+                        Text("Nothing logged yet.").font(.caption).foregroundStyle(Theme.secondaryInk)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 6)
+            }
+            .font(.callout)
+
             if !done.contains(today) {
                 HStack {
                     Text(gateDescription(decision)).foregroundStyle(Theme.secondaryInk)

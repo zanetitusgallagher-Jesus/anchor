@@ -16,7 +16,7 @@ final class SettingsStore {
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         if let data = defaults.data(forKey: Self.key),
-           let s = try? JSONDecoder().decode(AnchorSettings.self, from: data) {
+           let s = try? AnchorSettings.decodeMigrating(data) {
             settings = s
         } else {
             settings = AnchorSettings()
