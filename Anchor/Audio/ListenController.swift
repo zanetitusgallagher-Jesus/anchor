@@ -64,69 +64,198 @@ final class WEBAudioResolver {
     }
 }
 
-/// Plays today's reading aloud. Two sources:
-/// - **Narrator**: human-read World English Bible MP3s from eBible.org over HTTPS (whole chapters).
-/// - **Built-in voice**: the Mac's own speech voice reading the exact verses, offline.
-/// If narration can't load or stops with an error, it switches to the built-in
-/// voice for the rest of the passage and says so, so listening always works.
+/// Downloads chapter recordings over HTTPS once and keeps them in Caches, so
+/// passages can be cut exactly and replayed without the network.
+@MainActor
+final class NarrationLibrary {
+    let resolver = WEBAudioResolver()
+    private let session: URLSession = {
+        let c = URLSessionConfiguration.default
+        c.timeoutIntervalForRequest = 20
+        c.timeoutIntervalForResource = 180
+        return URLSession(configuration: c)
+    }()
+    private var inFlight: [String: Task<URL, Error>] = [:]
+
+    private var directory: URL {
+        let d = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Narration", isDirectory: true)
+        try? FileManager.default.createDirectory(at: d, withIntermediateDirectories: true)
+        return d
+    }
+
+    enum DownloadError: LocalizedError {
+        case http(Int), notAudio(String)
+        var errorDescription: String? {
+            switch self {
+            case .http(let c): "eBible.org returned HTTP \(c)."
+            case .notAudio(let t): "eBible.org sent \(t) instead of audio."
+            }
+        }
+    }
+
+    /// The local file for a chapter's recording, downloading it if needed.
+    func file(for chapter: ChapterRef) async throws -> URL {
+        let key = "\(chapter.bookID)-\(chapter.chapter)"
+        let dest = directory.appendingPathComponent("\(key).mp3")
+        if let size = try? dest.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 20_000 { return dest }
+        if let t = inFlight[key] { return try await t.value }
+        let t = Task { () throws -> URL in
+            let remote = try await resolver.url(for: ChapterRef(bookID: chapter.bookID, chapter: chapter.chapter))
+            let (tmp, resp) = try await session.download(from: remote)
+            let http = resp as? HTTPURLResponse
+            guard let code = http?.statusCode, (200..<300).contains(code) else { throw DownloadError.http(http?.statusCode ?? 0) }
+            let type = http?.value(forHTTPHeaderField: "Content-Type") ?? ""
+            guard type.lowercased().contains("audio") || type.lowercased().contains("mpeg") else {
+                resolver.invalidate(bookID: chapter.bookID)
+                throw DownloadError.notAudio(type.isEmpty ? "an unknown file" : type)
+            }
+            try? FileManager.default.removeItem(at: dest)
+            try FileManager.default.moveItem(at: tmp, to: dest)
+            return dest
+        }
+        inFlight[key] = t
+        defer { inFlight[key] = nil }
+        return try await t.value
+    }
+
+    /// Start downloading in the background (used for the next passage).
+    func prefetch(_ chapter: ChapterRef) {
+        Task { _ = try? await file(for: chapter) }
+    }
+}
+
+/// A passage cut from a chapter recording.
+struct NarrationSegment: Sendable {
+    let ref: ChapterRef
+    let file: URL
+    let start: Double
+    let end: Double
+    let duration: Double
+    let verseLengths: [Int]
+
+    /// Cuts `ref` out of the chapter recording at `file`, snapping both cuts to
+    /// the narrator's pauses (see NarrationTiming).
+    static func cut(_ ref: ChapterRef, file: URL, verseLengths: [Int]) throws -> NarrationSegment {
+        let audio = try AVAudioFile(forReading: file)
+        let rate = audio.processingFormat.sampleRate
+        let duration = Double(audio.length) / rate
+        if ref.isWholeChapter {
+            return NarrationSegment(ref: ref, file: file, start: 0, end: duration, duration: duration, verseLengths: verseLengths)
+        }
+        let est = NarrationTiming.estimate(verseLengths: verseLengths, start: ref.verseStart, end: ref.verseEnd, duration: duration)
+        var start = est.start
+        var end = est.end
+        if start > 1 {
+            let (levels, offset) = try loudness(audio, around: start, duration: duration)
+            start = NarrationTiming.snapToPause(levels: levels, step: 0.05, offset: offset, target: start, lean: .earlier)
+        } else {
+            start = 0
+        }
+        if end < duration - 1 {
+            let (levels, offset) = try loudness(audio, around: end, duration: duration)
+            end = NarrationTiming.snapToPause(levels: levels, step: 0.05, offset: offset, target: end, lean: .later)
+        } else {
+            end = duration
+        }
+        return NarrationSegment(ref: ref, file: file, start: max(0, start), end: min(duration, max(start + 1, end)),
+                                duration: duration, verseLengths: verseLengths)
+    }
+
+    /// RMS loudness in 50 ms windows for ±8 s around `center`.
+    private static func loudness(_ audio: AVAudioFile, around center: Double, duration: Double) throws -> ([Float], Double) {
+        let rate = audio.processingFormat.sampleRate
+        let from = max(0, center - 8)
+        let to = min(duration, center + 8)
+        let frames = AVAudioFrameCount((to - from) * rate)
+        guard frames > 0, let buffer = AVAudioPCMBuffer(pcmFormat: audio.processingFormat, frameCapacity: frames) else { return ([], from) }
+        audio.framePosition = AVAudioFramePosition(from * rate)
+        try audio.read(into: buffer, frameCount: frames)
+        guard let samples = buffer.floatChannelData?[0] else { return ([], from) }
+        let window = max(1, Int(rate * 0.05))
+        var levels: [Float] = []
+        var i = 0
+        let n = Int(buffer.frameLength)
+        while i + window <= n {
+            var sum: Float = 0
+            for j in i..<(i + window) { sum += samples[j] * samples[j] }
+            levels.append((sum / Float(window)).squareRoot())
+            i += window
+        }
+        return (levels, from)
+    }
+}
+
+/// Plays today's reading with the human narration of the World English Bible
+/// from eBible.org. Each passage is cut out of its chapter recording, so you
+/// hear exactly today's verses. The Mac's built-in voice is only used if you
+/// choose it after narration fails.
 @MainActor
 @Observable
 final class ListenController: NSObject {
-    enum Source: String, CaseIterable, Identifiable {
-        case narrator, deviceVoice
-        var id: String { rawValue }
-        var title: String { self == .narrator ? "Narrator (WEB)" : "Built-in voice" }
-    }
-
-    enum State: Equatable { case idle, loading, playing, paused }
+    enum State: Equatable { case idle, loading, playing, paused, failed(String) }
 
     private(set) var state: State = .idle
     private(set) var nowPlaying: String?
-    private(set) var notice: String?
-    /// The verse being spoken (built-in voice), for highlighting in the reader.
+    /// The verse being read, for highlighting in the reader.
     private(set) var currentVerse: VerseRef?
-    var source: Source = .narrator
     var rate: Float = 1.0 {
-        didSet {
-            player?.rate = state == .playing ? rate : 0
-        }
+        didSet { if state == .playing { player?.rate = rate } }
     }
 
     @ObservationIgnored private var queue: [ChapterRef] = []
     @ObservationIgnored private var position = 0
     @ObservationIgnored private var bible: (@MainActor () -> Bible?)?
-    @ObservationIgnored private let resolver = WEBAudioResolver()
+    @ObservationIgnored private var narrationText: (@MainActor () -> Bible?)?
+    @ObservationIgnored let library = NarrationLibrary()
     @ObservationIgnored private var player: AVPlayer?
-    @ObservationIgnored private var itemObservation: NSKeyValueObservation?
+    @ObservationIgnored private var observers: [Any] = []
     @ObservationIgnored private var endObserver: NSObjectProtocol?
-    @ObservationIgnored private var failObserver: NSObjectProtocol?
-    @ObservationIgnored private var loadTask: Task<Void, Never>?
+    @ObservationIgnored private var statusObservation: NSKeyValueObservation?
+    @ObservationIgnored private var generation = 0
+    @ObservationIgnored private var usingMacVoice = false
     @ObservationIgnored private let synth = AVSpeechSynthesizer()
     @ObservationIgnored private var utteranceVerses: [ObjectIdentifier: VerseRef] = [:]
-    @ObservationIgnored private var generation = 0
 
     override init() {
         super.init()
         synth.delegate = self
     }
 
-    var isActive: Bool { state != .idle }
-
-    /// Picks a sensible default: narrator for whole chapters, built-in voice
-    /// when today's passages are parts of chapters.
-    func prepare(_ chapters: [ChapterRef]) {
-        if state == .idle {
-            source = chapters.allSatisfy(\.isWholeChapter) ? .narrator : .deviceVoice
+    var isActive: Bool {
+        switch state {
+        case .idle, .failed: false
+        default: true
         }
     }
 
-    func play(_ chapters: [ChapterRef], bible: @escaping @MainActor () -> Bible?) {
+    /// - Parameters:
+    ///   - bible: the translation shown on screen (for the Mac-voice fallback).
+    ///   - narrationText: the World English Bible, which the narrator reads (used to time the cuts).
+    func play(_ chapters: [ChapterRef], bible: @escaping @MainActor () -> Bible?, narrationText: @escaping @MainActor () -> Bible?) {
         stop()
         generation += 1
         queue = chapters
         position = 0
         self.bible = bible
-        notice = nil
+        self.narrationText = narrationText
+        usingMacVoice = false
+        playCurrent()
+    }
+
+    /// After a failure: try the narration again from the passage that failed.
+    func retry() {
+        guard position < queue.count else { return }
+        generation += 1
+        usingMacVoice = false
+        playCurrent()
+    }
+
+    /// After a failure, if the user asks: read the rest with the Mac's voice.
+    func useMacVoice() {
+        guard position < queue.count else { return }
+        generation += 1
+        usingMacVoice = true
         playCurrent()
     }
 
@@ -146,8 +275,6 @@ final class ListenController: NSObject {
 
     func stop() {
         generation += 1
-        loadTask?.cancel()
-        loadTask = nil
         teardownPlayer()
         if synth.isSpeaking || synth.isPaused { synth.stopSpeaking(at: .immediate) }
         utteranceVerses = [:]
@@ -156,15 +283,10 @@ final class ListenController: NSObject {
         currentVerse = nil
     }
 
-    // MARK: Queue
-
     private func playCurrent() {
         guard position < queue.count else { finish(); return }
         let ref = queue[position]
-        switch source {
-        case .narrator: playNarration(ref)
-        case .deviceVoice: speak(ref)
-        }
+        if usingMacVoice { speak(ref) } else { narrate(ref) }
     }
 
     private func next() {
@@ -179,90 +301,110 @@ final class ListenController: NSObject {
         currentVerse = nil
     }
 
-    // MARK: Narrator (HTTPS MP3)
+    // MARK: Narration
 
-    private func playNarration(_ ref: ChapterRef) {
+    private func verseLengths(_ ref: ChapterRef) -> [Int] {
+        guard let book = narrationText?()?.book(ref.bookID), book.chapters.indices.contains(ref.chapter - 1) else { return [] }
+        return book.chapters[ref.chapter - 1].map(\.count)
+    }
+
+    private func narrate(_ ref: ChapterRef) {
+        teardownPlayer()
         state = .loading
-        let whole = ChapterRef(bookID: ref.bookID, chapter: ref.chapter)
-        nowPlaying = ref.isWholeChapter ? whole.description : "\(whole.description) (whole chapter)"
+        nowPlaying = ref.description
+        currentVerse = nil
         let gen = generation
-        loadTask = Task { [weak self] in
+        let lengths = verseLengths(ref)
+        if position + 1 < queue.count { library.prefetch(queue[position + 1]) }
+        Task { [weak self] in
             guard let self else { return }
             do {
-                let url = try await resolver.url(for: whole)
+                let file = try await library.file(for: ref)
+                let segment = try await Task.detached(priority: .userInitiated) {
+                    try NarrationSegment.cut(ref, file: file, verseLengths: lengths)
+                }.value
                 guard gen == generation else { return }
-                startPlayer(url: url, ref: ref, gen: gen)
+                start(segment, gen: gen)
             } catch {
-                guard gen == generation, !Task.isCancelled else { return }
-                fallBack(ref, reason: error.localizedDescription)
+                guard gen == generation else { return }
+                teardownPlayer()
+                state = .failed("Couldn’t load the narration for \(ref): \(error.localizedDescription)")
             }
         }
     }
 
-    private func startPlayer(url: URL, ref: ChapterRef, gen: Int) {
-        teardownPlayer()
-        let item = AVPlayerItem(url: url)
+    private func start(_ seg: NarrationSegment, gen: Int) {
+        let asset = AVURLAsset(url: seg.file, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
+        let item = AVPlayerItem(asset: asset)
+        item.audioTimePitchAlgorithm = .spectral
         let p = AVPlayer(playerItem: item)
-        p.automaticallyWaitsToMinimizeStalling = true
         player = p
-        itemObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+
+        statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
             let status = item.status
             let message = item.error?.localizedDescription
             Task { @MainActor in
                 guard let self, gen == self.generation else { return }
-                switch status {
-                case .readyToPlay:
-                    if self.state == .loading {
-                        self.state = .playing
-                        self.player?.rate = self.rate
-                    }
-                case .failed:
-                    self.resolver.invalidate(bookID: ref.bookID)
-                    self.fallBack(ref, reason: message ?? "The recording couldn’t be loaded.")
-                default: break
+                if status == .failed {
+                    self.teardownPlayer()
+                    self.state = .failed("The recording for \(seg.ref) couldn’t be played: \(message ?? "unknown error").")
                 }
             }
+        }
+
+        let startTime = CMTime(seconds: seg.start, preferredTimescale: 600)
+        p.seek(to: startTime, toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, gen == self.generation else { return }
+                self.player?.rate = self.rate
+                self.state = .playing
+            }
+        }
+
+        // Stop at the end of the passage, then move on.
+        if seg.end < seg.duration - 0.3 {
+            let token = p.addBoundaryTimeObserver(forTimes: [NSValue(time: CMTime(seconds: seg.end, preferredTimescale: 600))], queue: .main) { [weak self] in
+                MainActor.assumeIsolated {
+                    guard let self, gen == self.generation else { return }
+                    self.teardownPlayer()
+                    self.next()
+                }
+            }
+            observers.append(token)
         }
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, gen == self.generation else { return }
+                self.teardownPlayer()
                 self.next()
             }
         }
-        failObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemFailedToPlayToEndTime, object: item, queue: .main) { [weak self] note in
-            let err = (note.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey] as? Error)?.localizedDescription
+        // Follow along: highlight the verse being read.
+        let tick = p.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.3, preferredTimescale: 600), queue: .main) { [weak self] time in
             MainActor.assumeIsolated {
                 guard let self, gen == self.generation else { return }
-                self.fallBack(ref, reason: err ?? "Playback stopped.")
+                if let i = NarrationTiming.verseIndex(at: time.seconds, duration: seg.duration, verseLengths: seg.verseLengths) {
+                    let lo = seg.ref.verseStart ?? 1
+                    let hi = seg.ref.verseEnd ?? Int.max
+                    self.currentVerse = (lo...hi).contains(i) ? VerseRef(bookID: seg.ref.bookID, chapter: seg.ref.chapter, verse: i) : nil
+                }
             }
         }
-        // Don't wait forever on a dead connection.
-        Task { [weak self] in
-            try? await Task.sleep(for: .seconds(20))
-            guard let self, gen == self.generation, self.state == .loading else { return }
-            self.fallBack(ref, reason: "The recording took too long to load.")
-        }
+        observers.append(tick)
     }
 
     private func teardownPlayer() {
-        itemObservation?.invalidate()
-        itemObservation = nil
+        statusObservation?.invalidate()
+        statusObservation = nil
+        if let p = player { observers.forEach { p.removeTimeObserver($0) } }
+        observers = []
         if let o = endObserver { NotificationCenter.default.removeObserver(o) }
-        if let o = failObserver { NotificationCenter.default.removeObserver(o) }
         endObserver = nil
-        failObserver = nil
         player?.pause()
         player = nil
     }
 
-    private func fallBack(_ ref: ChapterRef, reason: String) {
-        teardownPlayer()
-        notice = "Narration isn’t available right now (\(reason)). Using the built-in voice instead."
-        source = .deviceVoice
-        speak(ref)
-    }
-
-    // MARK: Built-in voice (offline)
+    // MARK: Mac voice (only when chosen after a failure)
 
     private func speak(_ ref: ChapterRef) {
         let verses = bible?()?.verses(ref) ?? []
@@ -270,46 +412,22 @@ final class ListenController: NSObject {
         nowPlaying = ref.description
         state = .playing
         let voice = Self.bestVoice()
-        let intro = AVSpeechUtterance(string: spokenReference(ref))
-        configure(intro, voice: voice)
-        intro.postUtteranceDelay = 0.4
-        synth.speak(intro)
         for v in verses {
             let u = AVSpeechUtterance(string: v.text)
-            configure(u, voice: voice)
+            u.voice = voice
+            u.rate = AVSpeechUtteranceDefaultSpeechRate * min(1.4, max(0.6, rate * 0.95))
             u.postUtteranceDelay = 0.15
             utteranceVerses[ObjectIdentifier(u)] = v.ref
             synth.speak(u)
         }
-        // Marks the end of this passage.
         let end = AVSpeechUtterance(string: " ")
-        configure(end, voice: voice)
         utteranceVerses[ObjectIdentifier(end)] = VerseRef(bookID: "", chapter: -1, verse: -1)
         synth.speak(end)
     }
 
-    private func configure(_ u: AVSpeechUtterance, voice: AVSpeechSynthesisVoice?) {
-        u.voice = voice
-        u.rate = AVSpeechUtteranceDefaultSpeechRate * min(1.4, max(0.6, rate * 0.95))
-    }
-
-    private func spokenReference(_ ref: ChapterRef) -> String {
-        let name = BookCatalog.name(ref.bookID)
-        if ref.isWholeChapter { return "\(name), chapter \(ref.chapter)." }
-        let s = ref.verseStart ?? 1
-        if let e = ref.verseEnd { return "\(name) \(ref.chapter), verses \(s) to \(e)." }
-        return "\(name) \(ref.chapter), from verse \(s)."
-    }
-
-    /// The best installed English voice: premium, then enhanced, then default.
     static func bestVoice() -> AVSpeechSynthesisVoice? {
-        let lang = Locale.preferredLanguages.first ?? "en-US"
         let english = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("en") }
-        let ranked = english.sorted { a, b in
-            if a.quality != b.quality { return a.quality.rawValue > b.quality.rawValue }
-            return (a.language == lang ? 0 : 1) < (b.language == lang ? 0 : 1)
-        }
-        return ranked.first ?? AVSpeechSynthesisVoice(language: "en-US")
+        return english.max { $0.quality.rawValue < $1.quality.rawValue } ?? AVSpeechSynthesisVoice(language: "en-US")
     }
 }
 
