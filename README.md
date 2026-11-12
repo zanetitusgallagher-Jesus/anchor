@@ -133,6 +133,20 @@ The schedule logic is in `AnchorCore/Focus.swift`, with unit tests.
 
 ---
 
+## Listening
+
+The Scripture step has a **Listen** bar (⌘L) with play/pause/stop and a speed control (0.8×–1.5×). There are two voices:
+
+- **Narrator (WEB):** a human reading of the World English Bible from [eBible.org](https://ebible.org/eng-web/audio/) (public domain), streamed over HTTPS, one recording per chapter. When a passage is only part of a chapter (as in the shuffled plan), the whole chapter plays.
+- **Built-in voice:** your Mac reads the exact verses you see, offline, and highlights each verse as it's read. Install a Premium or Enhanced English voice (System Settings → Accessibility → Spoken Content) for a more natural sound.
+
+Anchor picks the narrator for whole chapters and the built-in voice for partial passages. You can switch before pressing Listen.
+
+**How it stays reliable:**
+- eBible.org names its files inconsistently from book to book (`01_01_Genesis_Chapter_One.mp3`, `0999 John-Chapter Three.mp3`, `0499 Psalms-Twenty One.mp3`, `0629 Proverbs-Chapter 001.mp3`, and duplicates such as `… (1).mp3`). Anchor never guesses a URL. It reads each book's folder listing over HTTPS, works out the chapter from the end of each file name, and caches the result.
+- If a recording can't be found, doesn't load within 20 seconds, or stops with an error, Anchor switches to the built-in voice for the rest of the passage and tells you why.
+- **CI checks the live source on every build:** all 66 books' listings must resolve to all 1,189 chapters, sample files must be real MP3 audio over HTTPS, and AVFoundation must be able to open one (`AnchorTests/LiveAudioTests.swift`).
+
 ## Challenges
 
 Start these from Dashboard → **Challenges**. Their progress shows on the Welcome screen, on the Unlock card and on the dashboard.

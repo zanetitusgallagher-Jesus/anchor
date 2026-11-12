@@ -15,6 +15,8 @@ struct ScriptureStep: View {
         let required = flow.isRequired(.scripture)
 
         VStack(alignment: .leading, spacing: 20) {
+            ListenBar(chapters: flow.reading?.chapters ?? [ChapterRef(bookID: "PSA", chapter: (flow.today.day % 150) + 1)])
+
             if let reading = flow.reading {
                 ScriptureReaderView(chapters: reading.chapters,
                                     heading: reading.title,
@@ -131,6 +133,7 @@ struct ScriptureReaderView: View {
                         .frame(minWidth: settings.scriptureFontSize * 1.1, alignment: .trailing)
                     Text(v.text)
                         .font(Theme.scripture(settings))
+                        .background(model.listen.currentVerse == v.ref ? Theme.accent.opacity(0.15) : .clear)
                         .lineSpacing(settings.scriptureFontSize * 0.35)
                         .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)

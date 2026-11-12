@@ -194,6 +194,7 @@ final class GateController {
     }
 
     private func dismiss() {
+        model.listen.stop()
         isActive = false
         flow = nil
         shownAt = nil

@@ -13,6 +13,8 @@ final class AppModel {
     let plans = PlanStore()
     @ObservationIgnored private(set) lazy var gate = GateController(model: self)
     @ObservationIgnored private(set) lazy var focus = FocusController(model: self)
+    /// Reads today's passage aloud (narrator over HTTPS, or the built-in voice).
+    let listen = ListenController()
 
     /// Bumped whenever data changes outside SwiftUI queries, so summary views refresh.
     var revision = 0
